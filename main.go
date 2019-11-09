@@ -62,32 +62,37 @@ func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
 	return false
 }
 
-func (bptn *BPlusTreeNode) cutTail() *BPlusTreeNode {
-	half := bptn.count / 2
-	tail := BPlusTreeNode{
-		count: half,
+func (bptn *BPlusTreeNode) cutTailWithMiddleKey() (tail *BPlusTreeNode, middleKey *bPlusTreeKey) {
+	tail = &BPlusTreeNode{
+		count: bptn.count / 2,
 	}
+	middleKey = &bPlusTreeKey{}
 	if bptn.isLeaf {
 		//devide by two leaf nodes
-		tail.isLeaf = true
 		currentKey := bptn.leafHead
-		for i := 0; i < half-1; i++ {
+		var previousKey *bPlusTreeKey
+		for i := 1; i < tail.count; i++ {
+			previousKey = currentKey
 			currentKey = currentKey.nextKey
 		}
-		tail.leafHead = currentKey.nextKey
-		currentKey.nextKey = nil
+		tail.isLeaf = true
+		tail.leafHead = currentKey
+		previousKey.nextKey = nil
+		middleKey.value = currentKey.value
 	} else {
 		//devide by two internal nodes
 		currentKey := bptn.internalNodeHead.nextKey
-		previousPointer := bptn.internalNodeHead
-		for i := 0; i < half-2; i++ {
-			previousPointer = currentKey.nextPointer
+		var previousKey *bPlusTreeKey
+		for i := 1; i < tail.count; i++ {
+			previousKey = currentKey
 			currentKey = currentKey.nextPointer.nextKey
 		}
+		middleKey = currentKey
 		tail.internalNodeHead = currentKey.nextPointer
-		previousPointer.nextKey = nil
+		currentKey.nextPointer = nil
+		previousKey.nextPointer.nextKey = nil
 	}
-	return &tail
+	return
 }
 
 type bPlusTreeKey struct {
@@ -124,6 +129,7 @@ func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) {
 		if node.isLeaf {
 			node.insertToLeafNode(key, value)
 			if node.count > bpt.degree {
+				//tail := node.cutTailWithMiddleKey()
 
 			}
 		} else {
