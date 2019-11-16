@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math/rand"
 	"testing"
 )
 
@@ -20,7 +21,7 @@ func Test_DevideByTwoInternalNodes(t *testing.T) {
 		currentPointer.nextKey = key
 		currentPointer = currentPointer.nextKey.nextPointer
 	}
-	tailNode, middleKey := leafNode.cutTailWithMiddleKey()
+	subtree := leafNode.cutByTwoNodes()
 	currentPointer = leafNode.internalNodeHead
 	i := 1
 	for currentPointer.nextKey != nil {
@@ -30,11 +31,11 @@ func Test_DevideByTwoInternalNodes(t *testing.T) {
 		currentPointer = currentPointer.nextKey.nextPointer
 		i = i + 10
 	}
-	if middleKey.value != int64(i) {
+	if subtree.nextKey.value != int64(i) {
 		t.FailNow()
 	}
 	i = i + 10
-	currentPointer = tailNode.internalNodeHead
+	currentPointer = subtree.nextKey.nextPointer.childNode.internalNodeHead
 	for currentPointer.nextKey != nil {
 		if currentPointer.nextKey.value != int64(i) {
 			t.FailNow()
@@ -58,7 +59,7 @@ func Test_DevideByTwoLeafNodes(t *testing.T) {
 		currentTailKey.nextKey = key
 		currentTailKey = currentTailKey.nextKey
 	}
-	tailNode, middleKey := leafNode.cutTailWithMiddleKey()
+	subtree := leafNode.cutByTwoNodes()
 	currentKey := leafNode.leafHead
 	i := 1
 	for currentKey != nil {
@@ -68,10 +69,10 @@ func Test_DevideByTwoLeafNodes(t *testing.T) {
 		currentKey = currentKey.nextKey
 		i = i + 10
 	}
-	if middleKey.value != int64(i) {
+	if subtree.nextKey.value != int64(i) {
 		t.FailNow()
 	}
-	currentKey = tailNode.leafHead
+	currentKey = subtree.nextKey.nextKey
 	for currentKey != nil {
 		if currentKey.value != int64(i) {
 			t.FailNow()
@@ -79,5 +80,12 @@ func Test_DevideByTwoLeafNodes(t *testing.T) {
 		currentKey = currentKey.nextKey
 		i = i + 10
 	}
+}
 
+func Test_Insert10Values(t *testing.T) {
+	tree := initTree(3)
+	for i := 0; i < 100; i++ {
+		tree.Insert(rand.Int63n(1000), "")
+	}
+	tree.PrintTree()
 }
