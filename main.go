@@ -24,7 +24,7 @@ type BPlusTree struct {
 }
 
 //PrintTree struct
-func (bptn *BPlusTree) PrintTree() {
+func (bpt *BPlusTree) PrintTree() {
 
 }
 
@@ -32,6 +32,7 @@ func (bptn *BPlusTree) PrintTree() {
 type BPlusTreeNode struct {
 	count            int
 	isLeaf           bool
+	isRoot           bool
 	internalNodeHead *bPlusTreePointer //only for internal node
 	leafHead         *bPlusTreeKey     //only for leaf node
 }
@@ -143,7 +144,12 @@ func (bpt *BPlusTree) Insert(key int64, value string) {
 		}
 		return
 	}
-	bpt.insert(key, value, bpt.root)
+	if subtree := bpt.insert(key, value, bpt.root); subtree != nil {
+		newNode := BPlusTreeNode{
+			internalNodeHead: subtree,
+		}
+		bpt.root = &newNode
+	}
 }
 
 func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlusTreePointer {
@@ -164,16 +170,18 @@ func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlu
 		}
 		//if internal node
 		subtree := bpt.insert(key, value, currentPointer.childNode)
-		subtree.nextKey.nextPointer.nextKey = currentPointer.nextKey
-		if currentPointer == node.internalNodeHead {
-			node.internalNodeHead = subtree
-		} else {
-			previousPointer.nextKey.nextPointer = subtree
-		}
-		node.count = node.count + 1
-		if node.count > bpt.countInNode {
-			subtree := node.cutByTwoNodes()
-			return subtree
+		if subtree != nil {
+			subtree.nextKey.nextPointer.nextKey = currentPointer.nextKey
+			if currentPointer == node.internalNodeHead {
+				node.internalNodeHead = subtree
+			} else {
+				previousPointer.nextKey.nextPointer = subtree
+			}
+			node.count = node.count + 1
+			if node.count > bpt.countInNode {
+				subtree := node.cutByTwoNodes()
+				return subtree
+			}
 		}
 		return nil
 	}
