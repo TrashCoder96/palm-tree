@@ -12,15 +12,15 @@ func main() {
 func process(params []string) {
 }
 
-func initTree(count int) *BPlusTree {
-	tree := BPlusTree{countInNode: count}
+func initTree(order int) *BPlusTree {
+	tree := BPlusTree{order: order}
 	return &tree
 }
 
 //BPlusTree struct
 type BPlusTree struct {
-	countInNode int
-	root        *BPlusTreeNode
+	order int
+	root  *BPlusTreeNode
 }
 
 //PrintTree struct
@@ -30,9 +30,8 @@ func (bpt *BPlusTree) PrintTree() {
 
 //BPlusTreeNode struct
 type BPlusTreeNode struct {
-	count            int
+	countOfKeys      int
 	isLeaf           bool
-	isRoot           bool
 	internalNodeHead *bPlusTreePointer //only for internal node
 	leafHead         *bPlusTreeKey     //only for leaf node
 }
@@ -54,7 +53,7 @@ func (bptn *BPlusTreeNode) insertToLeafNode(key int64, value string) {
 	} else {
 		bptn.leafHead = &newLeaf
 	}
-	bptn.count = bptn.count + 1
+	bptn.countOfKeys = bptn.countOfKeys + 1
 }
 
 func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
@@ -77,14 +76,14 @@ func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
 
 func (bptn *BPlusTreeNode) cutByTwoNodes() (subtree *bPlusTreePointer) {
 	tail := &BPlusTreeNode{
-		count: bptn.count / 2,
+		countOfKeys: bptn.countOfKeys / 2,
 	}
 	middleKey := &bPlusTreeKey{}
 	if bptn.isLeaf {
 		//devide by two leaf nodes
 		currentKey := bptn.leafHead
 		var previousKey *bPlusTreeKey
-		for i := 1; i < tail.count; i++ {
+		for i := 0; i < tail.countOfKeys; i++ {
 			previousKey = currentKey
 			currentKey = currentKey.nextKey
 		}
@@ -92,12 +91,11 @@ func (bptn *BPlusTreeNode) cutByTwoNodes() (subtree *bPlusTreePointer) {
 		tail.leafHead = currentKey
 		previousKey.nextKey = nil
 		middleKey.value = currentKey.value
-		bptn.count = bptn.count / 2
 	} else {
 		//devide by two internal nodes
 		currentKey := bptn.internalNodeHead.nextKey
 		var previousKey *bPlusTreeKey
-		for i := 1; i < tail.count; i++ {
+		for i := 0; i < tail.countOfKeys; i++ {
 			previousKey = currentKey
 			currentKey = currentKey.nextPointer.nextKey
 		}
@@ -105,8 +103,8 @@ func (bptn *BPlusTreeNode) cutByTwoNodes() (subtree *bPlusTreePointer) {
 		tail.internalNodeHead = currentKey.nextPointer
 		currentKey.nextPointer = nil
 		previousKey.nextPointer.nextKey = nil
-		bptn.count = bptn.count/2 - 1
 	}
+	bptn.countOfKeys = bptn.countOfKeys / 2
 	leftPointer := &bPlusTreePointer{
 		childNode: bptn,
 		nextKey:   middleKey,
@@ -137,7 +135,8 @@ func (bpt *BPlusTree) Find(key int64) {
 func (bpt *BPlusTree) Insert(key int64, value string) {
 	if bpt.root == nil {
 		bpt.root = &BPlusTreeNode{
-			isLeaf: true,
+			isLeaf:      true,
+			countOfKeys: 1,
 			leafHead: &bPlusTreeKey{
 				value: key,
 			},
@@ -147,6 +146,7 @@ func (bpt *BPlusTree) Insert(key int64, value string) {
 	if subtree := bpt.insert(key, value, bpt.root); subtree != nil {
 		newNode := BPlusTreeNode{
 			internalNodeHead: subtree,
+			countOfKeys:      1,
 		}
 		bpt.root = &newNode
 	}
@@ -156,7 +156,7 @@ func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlu
 	if node != nil {
 		if node.isLeaf {
 			node.insertToLeafNode(key, value)
-			if node.count > bpt.countInNode {
+			if node.countOfKeys > 2*bpt.order-1 {
 				subtree := node.cutByTwoNodes()
 				return subtree
 			}
@@ -177,8 +177,8 @@ func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlu
 			} else {
 				previousPointer.nextKey.nextPointer = subtree
 			}
-			node.count = node.count + 1
-			if node.count > bpt.countInNode {
+			node.countOfKeys = node.countOfKeys + 1
+			if node.countOfKeys > 2*bpt.order-1 {
 				subtree := node.cutByTwoNodes()
 				return subtree
 			}

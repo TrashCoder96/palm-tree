@@ -1,7 +1,6 @@
 package main
 
 import (
-	"math/rand"
 	"testing"
 )
 
@@ -12,7 +11,7 @@ func Test_DevideByTwoInternalNodes(t *testing.T) {
 	leafNode.internalNodeHead = &bPlusTreePointer{}
 	currentPointer := leafNode.internalNodeHead
 	for i := 0; i < 10; i++ {
-		leafNode.count = leafNode.count + 1
+		leafNode.countOfKeys = leafNode.countOfKeys + 1
 		key := &bPlusTreeKey{
 			value: int64(i*10 + 1),
 		}
@@ -51,8 +50,8 @@ func Test_DevideByTwoLeafNodes(t *testing.T) {
 	}
 	leafNode.leafHead = &bPlusTreeKey{value: 1}
 	currentTailKey := leafNode.leafHead
-	for i := 1; i < 9; i++ {
-		leafNode.count = leafNode.count + 1
+	for i := 1; i < 6; i++ {
+		leafNode.countOfKeys = leafNode.countOfKeys + 1
 		key := &bPlusTreeKey{
 			value: int64(i*10 + 1),
 		}
@@ -80,12 +79,13 @@ func Test_DevideByTwoLeafNodes(t *testing.T) {
 		currentKey = currentKey.nextKey
 		i = i + 10
 	}
+	t.Log()
 }
 
 func Test_Insert10Values(t *testing.T) {
 	tree := initTree(3)
-	for i := 0; i < 100; i++ {
-		tree.Insert(rand.Int63n(1000), "")
+	for i := 1; i < 7; i++ {
+		tree.Insert(int64(i), "")
 	}
 	tree.PrintTree()
 }
