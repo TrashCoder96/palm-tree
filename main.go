@@ -74,16 +74,15 @@ func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
 	return false
 }
 
-func (bptn *BPlusTreeNode) cutByTwoNodes() (subtree *bPlusTreePointer) {
-	tail := &BPlusTreeNode{
-		countOfKeys: bptn.countOfKeys / 2,
-	}
+func (bptn *BPlusTreeNode) cutByTwoNodes() *bPlusTreePointer {
+	tail := &BPlusTreeNode{}
 	middleKey := &bPlusTreeKey{}
+	var currentKey *bPlusTreeKey
 	if bptn.isLeaf {
 		//devide by two leaf nodes
-		currentKey := bptn.leafHead
+		currentKey = bptn.leafHead
 		var previousKey *bPlusTreeKey
-		for i := 0; i < tail.countOfKeys; i++ {
+		for i := 0; i < bptn.countOfKeys/2; i++ {
 			previousKey = currentKey
 			currentKey = currentKey.nextKey
 		}
@@ -91,20 +90,25 @@ func (bptn *BPlusTreeNode) cutByTwoNodes() (subtree *bPlusTreePointer) {
 		tail.leafHead = currentKey
 		previousKey.nextKey = nil
 		middleKey.value = currentKey.value
+		bptn.countOfKeys = bptn.countOfKeys / 2
+		tail.countOfKeys = bptn.countOfKeys / 2
 	} else {
 		//devide by two internal nodes
-		currentKey := bptn.internalNodeHead.nextKey
+		currentKey = bptn.internalNodeHead.nextKey
 		var previousKey *bPlusTreeKey
-		for i := 0; i < tail.countOfKeys; i++ {
+		for i := 0; i < bptn.countOfKeys/2; i++ {
 			previousKey = currentKey
 			currentKey = currentKey.nextPointer.nextKey
 		}
-		middleKey = currentKey
-		tail.internalNodeHead = currentKey.nextPointer
-		currentKey.nextPointer = nil
+		tail.internalNodeHead = &bPlusTreePointer{
+			nextKey:   currentKey.nextPointer.nextKey,
+			childNode: currentKey.nextPointer.childNode,
+		}
+		middleKey.value = currentKey.value
 		previousKey.nextPointer.nextKey = nil
+		bptn.countOfKeys = bptn.countOfKeys / 2
+		tail.countOfKeys = bptn.countOfKeys/2 - 1
 	}
-	bptn.countOfKeys = bptn.countOfKeys / 2
 	leftPointer := &bPlusTreePointer{
 		childNode: bptn,
 		nextKey:   middleKey,

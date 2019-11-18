@@ -83,8 +83,8 @@ func Test_DevideByTwoLeafNodes(t *testing.T) {
 }
 
 func Test_Insert10Values(t *testing.T) {
-	tree := initTree(3)
-	for i := 1; i < 7; i++ {
+	tree := initTree(2)
+	for i := 1; i < 70; i++ {
 		tree.Insert(int64(i), "")
 	}
 	tree.PrintTree()
