@@ -36,7 +36,8 @@ type BPlusTreeNode struct {
 	leafHead         *bPlusTreeKey     //only for leaf node
 }
 
-func (bptn *BPlusTreeNode) printTreeNode() {
+func (bptn *BPlusTreeNode) getPointer(key int64) *bPlusTreePointer {
+	return nil
 }
 
 func (bptn *BPlusTreeNode) insertToLeafNode(key int64, value string) {
@@ -56,24 +57,6 @@ func (bptn *BPlusTreeNode) insertToLeafNode(key int64, value string) {
 	bptn.countOfKeys = bptn.countOfKeys + 1
 }
 
-func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
-	currentLeaf := bptn.leafHead
-	var previousLeaf *bPlusTreeKey
-	for currentLeaf != nil {
-		if currentLeaf.value == key {
-			if previousLeaf != nil {
-				previousLeaf.nextKey = currentLeaf.nextKey.nextKey
-			} else {
-				bptn.leafHead = currentLeaf.nextKey.nextKey
-			}
-			return true
-		}
-		previousLeaf = currentLeaf
-		currentLeaf = currentLeaf.nextKey
-	}
-	return false
-}
-
 func (bptn *BPlusTreeNode) cutByTwoNodes() *bPlusTreePointer {
 	tail := &BPlusTreeNode{}
 	middleKey := &bPlusTreeKey{}
@@ -81,23 +64,20 @@ func (bptn *BPlusTreeNode) cutByTwoNodes() *bPlusTreePointer {
 	if bptn.isLeaf {
 		//devide by two leaf nodes
 		currentKey = bptn.leafHead
-		var previousKey *bPlusTreeKey
 		for i := 0; i < bptn.countOfKeys/2; i++ {
-			previousKey = currentKey
 			currentKey = currentKey.nextKey
 		}
 		tail.isLeaf = true
 		tail.leafHead = currentKey
-		previousKey.nextKey = nil
+		currentKey.previousKey.nextKey = nil
+		currentKey.previousKey = nil
 		middleKey.value = currentKey.value
 		bptn.countOfKeys = bptn.countOfKeys / 2
 		tail.countOfKeys = bptn.countOfKeys / 2
 	} else {
 		//devide by two internal nodes
 		currentKey = bptn.internalNodeHead.nextKey
-		var previousKey *bPlusTreeKey
 		for i := 0; i < bptn.countOfKeys/2; i++ {
-			previousKey = currentKey
 			currentKey = currentKey.nextPointer.nextKey
 		}
 		tail.internalNodeHead = &bPlusTreePointer{
@@ -105,7 +85,8 @@ func (bptn *BPlusTreeNode) cutByTwoNodes() *bPlusTreePointer {
 			childNode: currentKey.nextPointer.childNode,
 		}
 		middleKey.value = currentKey.value
-		previousKey.nextPointer.nextKey = nil
+		currentKey.previousPointer.nextKey = nil
+		currentKey.nextPointer.previousKey = nil
 		bptn.countOfKeys = bptn.countOfKeys / 2
 		tail.countOfKeys = bptn.countOfKeys/2 - 1
 	}
@@ -114,25 +95,64 @@ func (bptn *BPlusTreeNode) cutByTwoNodes() *bPlusTreePointer {
 		nextKey:   middleKey,
 	}
 	rightPointer := &bPlusTreePointer{
-		childNode: tail,
+		childNode:   tail,
+		previousKey: middleKey,
 	}
 	middleKey.nextPointer = rightPointer
+	middleKey.previousPointer = leftPointer
 	return leftPointer
 }
 
 type bPlusTreeKey struct {
-	value       int64
-	nextPointer *bPlusTreePointer
-	nextKey     *bPlusTreeKey
+	value           int64
+	nextPointer     *bPlusTreePointer
+	nextKey         *bPlusTreeKey
+	previousKey     *bPlusTreeKey
+	previousPointer *bPlusTreePointer
 }
 
 type bPlusTreePointer struct {
-	nextKey   *bPlusTreeKey
-	childNode *BPlusTreeNode
+	nextKey     *bPlusTreeKey
+	previousKey *bPlusTreeKey
+	childNode   *BPlusTreeNode
 }
 
-//Find function
-func (bpt *BPlusTree) Find(key int64) {
+func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlusTreePointer {
+	if node != nil {
+		if node.isLeaf {
+			node.insertToLeafNode(key, value)
+			if node.countOfKeys > 2*bpt.order-1 {
+				subtree := node.cutByTwoNodes()
+				return subtree
+			}
+			return nil
+		}
+		currentPointer := node.getPointer(key)
+		//if internal node
+		subtree := bpt.insert(key, value, currentPointer.childNode)
+		if subtree != nil {
+			subtreeRightPointer := subtree.nextKey.nextPointer
+			subtreeLeftPointer := subtree
+			if currentPointer == node.internalNodeHead {
+				node.internalNodeHead = subtreeLeftPointer
+				subtreeRightPointer.nextKey = currentPointer.nextKey
+				subtreeRightPointer.nextKey.previousPointer = subtreeRightPointer
+			} else {
+				currentPointer.previousKey.nextPointer = subtreeLeftPointer
+				subtreeLeftPointer.previousKey = currentPointer.previousKey
+				subtreeRightPointer.nextKey = currentPointer.nextKey
+				currentPointer.nextKey.nextPointer = subtreeRightPointer
+			}
+			node.countOfKeys = node.countOfKeys + 1
+			if node.countOfKeys > 2*bpt.order-1 {
+				subtree := node.cutByTwoNodes()
+				return subtree
+			}
+		}
+		return nil
+	}
+	log.Panicln("Panic! Operation not allowed. Tree node is nil")
+	return nil
 }
 
 //Insert function
@@ -156,47 +176,57 @@ func (bpt *BPlusTree) Insert(key int64, value string) {
 	}
 }
 
-func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlusTreePointer {
-	if node != nil {
-		if node.isLeaf {
-			node.insertToLeafNode(key, value)
-			if node.countOfKeys > 2*bpt.order-1 {
-				subtree := node.cutByTwoNodes()
-				return subtree
-			}
-			return nil
+//Find function
+func (bpt *BPlusTree) Find(key int64) {
+}
+
+//Update function
+/*func (bpt *BPlusTree) Update(key int64, value string) error {
+	return bpt.update(key, value, bpt.root)
+}*/
+
+/*func (bpt *BPlusTree) update(key int64, value string, node *BPlusTreeNode) error {
+	if node.isLeaf {
+		currentKey := node.leafHead
+		for currentKey != nil || currentKey.value != key {
+			currentKey = currentKey.nextKey
 		}
+		if currentKey != nil {
+			//set value
+		} else {
+			return errors.New("No element with this key")
+		}
+	} else {
 		currentPointer := node.internalNodeHead
 		var previousPointer *bPlusTreePointer
 		for currentPointer.nextKey != nil && currentPointer.nextKey.value < key {
 			previousPointer = currentPointer
 			currentPointer = currentPointer.nextKey.nextPointer
 		}
-		//if internal node
-		subtree := bpt.insert(key, value, currentPointer.childNode)
-		if subtree != nil {
-			subtree.nextKey.nextPointer.nextKey = currentPointer.nextKey
-			if currentPointer == node.internalNodeHead {
-				node.internalNodeHead = subtree
-			} else {
-				previousPointer.nextKey.nextPointer = subtree
-			}
-			node.countOfKeys = node.countOfKeys + 1
-			if node.countOfKeys > 2*bpt.order-1 {
-				subtree := node.cutByTwoNodes()
-				return subtree
-			}
-		}
-		return nil
-	}
-	log.Panicln("Panic! Operation not allowed. Tree node is nil")
-	return nil
-}
+		if previousPointer != nil {
 
-//Update function
-func (bpt *BPlusTree) Update(key int64, value string) {
-}
+		}
+	}
+}*/
 
 //Delete function
 func (bpt *BPlusTree) Delete(key int64) {
+}
+
+func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
+	currentLeaf := bptn.leafHead
+	var previousLeaf *bPlusTreeKey
+	for currentLeaf != nil {
+		if currentLeaf.value == key {
+			if previousLeaf != nil {
+				previousLeaf.nextKey = currentLeaf.nextKey.nextKey
+			} else {
+				bptn.leafHead = currentLeaf.nextKey.nextKey
+			}
+			return true
+		}
+		previousLeaf = currentLeaf
+		currentLeaf = currentLeaf.nextKey
+	}
+	return false
 }

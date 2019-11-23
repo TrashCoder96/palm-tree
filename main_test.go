@@ -18,6 +18,8 @@ func Test_DevideByTwoInternalNodes(t *testing.T) {
 		pointer := &bPlusTreePointer{}
 		key.nextPointer = pointer
 		currentPointer.nextKey = key
+		key.previousPointer = currentPointer
+		pointer.previousKey = key
 		currentPointer = currentPointer.nextKey.nextPointer
 	}
 	subtree := leafNode.cutByTwoNodes()
@@ -56,6 +58,7 @@ func Test_DevideByTwoLeafNodes(t *testing.T) {
 			value: int64(i*10 + 1),
 		}
 		currentTailKey.nextKey = key
+		key.previousKey = currentTailKey
 		currentTailKey = currentTailKey.nextKey
 	}
 	subtree := leafNode.cutByTwoNodes()
@@ -84,7 +87,7 @@ func Test_DevideByTwoLeafNodes(t *testing.T) {
 
 func Test_Insert10Values(t *testing.T) {
 	tree := initTree(2)
-	for i := 1; i < 70; i++ {
+	for i := 1; i < 700; i++ {
 		tree.Insert(int64(i), "")
 	}
 	tree.PrintTree()
