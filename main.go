@@ -174,6 +174,9 @@ func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlu
 				node.internalNodeHead = subtreeLeftPointer
 				subtreeRightPointer.nextKey = currentPointer.nextKey
 				subtreeRightPointer.nextKey.previousPointer = subtreeRightPointer
+			} else if currentPointer.nextKey == nil {
+				currentPointer.previousKey.nextPointer = subtreeLeftPointer
+				subtreeLeftPointer.previousKey = currentPointer.previousKey
 			} else {
 				currentPointer.previousKey.nextPointer = subtreeLeftPointer
 				subtreeLeftPointer.previousKey = currentPointer.previousKey

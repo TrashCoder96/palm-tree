@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math/rand"
 	"testing"
 )
 
@@ -177,10 +178,18 @@ func Test_AddKeyAtStartOfList(t *testing.T) {
 	}
 }
 
-func Test_Insert10Values(t *testing.T) {
+func Test_Insert700Values(t *testing.T) {
 	tree := initTree(2)
 	for i := 1; i < 700; i++ {
 		tree.Insert(int64(i), "")
+	}
+	tree.PrintTree()
+}
+
+func Test_InsertRandom700Values(t *testing.T) {
+	tree := initTree(2)
+	for i := 1; i < 700; i++ {
+		tree.Insert(rand.Int63n(1000), "")
 	}
 	tree.PrintTree()
 }
