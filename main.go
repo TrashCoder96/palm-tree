@@ -221,43 +221,6 @@ func (bpt *BPlusTree) Insert(key int64, value string) {
 	}
 }
 
-//Find function
-func (bpt *BPlusTree) Find(key int64) {
-}
-
-//Update function
-/*func (bpt *BPlusTree) Update(key int64, value string) error {
-	return bpt.update(key, value, bpt.root)
-}*/
-
-/*func (bpt *BPlusTree) update(key int64, value string, node *BPlusTreeNode) error {
-	if node.isLeaf {
-		currentKey := node.leafHead
-		for currentKey != nil || currentKey.value != key {
-			currentKey = currentKey.nextKey
-		}
-		if currentKey != nil {
-			//set value
-		} else {
-			return errors.New("No element with this key")
-		}
-	} else {
-		currentPointer := node.internalNodeHead
-		var previousPointer *bPlusTreePointer
-		for currentPointer.nextKey != nil && currentPointer.nextKey.value < key {
-			previousPointer = currentPointer
-			currentPointer = currentPointer.nextKey.nextPointer
-		}
-		if previousPointer != nil {
-
-		}
-	}
-}*/
-
-//Delete function
-func (bpt *BPlusTree) Delete(key int64) {
-}
-
 func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
 	currentLeaf := bptn.leafHead
 	var previousLeaf *bPlusTreeKey
