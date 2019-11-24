@@ -36,22 +36,28 @@ type BPlusTreeNode struct {
 }
 
 func (bptn *BPlusTreeNode) getPointer(key int64) *bPlusTreePointer {
-	currentKey := bptn.internalNodeHead.nextKey
-	currentKeyValueMoreOrEqualsKey := false
-	currentKeyIsLastKey := false
-	for {
-		currentKeyValueMoreOrEqualsKey = currentKey.value >= key
-		currentKeyIsLastKey = currentKey.nextPointer.nextKey == nil
-		if currentKeyValueMoreOrEqualsKey || currentKeyIsLastKey {
-			break
-		} else {
-			currentKey = currentKey.nextPointer.nextKey
+	if !bptn.isLeaf {
+		currentPointer := bptn.internalNodeHead
+		nextKeyValueMoreOrEqualsKey := false
+		nextKeyIsNil := false
+		for {
+			nextKeyIsNil = currentPointer.nextKey == nil
+			if !nextKeyIsNil {
+				nextKeyValueMoreOrEqualsKey = currentPointer.nextKey.value >= key
+			}
+			if nextKeyValueMoreOrEqualsKey || nextKeyIsNil {
+				break
+			} else {
+				currentPointer = currentPointer.nextKey.nextPointer
+			}
 		}
-	}
-	if currentKeyIsLastKey && !currentKeyValueMoreOrEqualsKey {
-		return currentKey.nextPointer
-	} else if !currentKeyIsLastKey && currentKeyValueMoreOrEqualsKey {
-		return currentKey.previousPointer
+		if nextKeyIsNil && !nextKeyValueMoreOrEqualsKey {
+			return currentPointer
+		} else if nextKeyValueMoreOrEqualsKey {
+			return currentPointer
+		} else {
+			panic("Operation is not allowed!!!")
+		}
 	} else {
 		panic("Operation is not allowed!!!")
 	}

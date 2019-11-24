@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"math/rand"
 	"testing"
 )
@@ -186,10 +187,32 @@ func Test_Insert700Values(t *testing.T) {
 	tree.PrintTree()
 }
 
+func Test_GetPointer_oneKey(t *testing.T) {
+	internalNode := BPlusTreeNode{
+		isLeaf: false,
+	}
+	internalNode.internalNodeHead = &bPlusTreePointer{}
+	currentPointer := internalNode.internalNodeHead
+	for i := 0; i < 2; i++ {
+		internalNode.countOfKeys = internalNode.countOfKeys + 1
+		key := &bPlusTreeKey{
+			value: int64(i*10 + 1),
+		}
+		pointer := &bPlusTreePointer{}
+		key.nextPointer = pointer
+		currentPointer.nextKey = key
+		key.previousPointer = currentPointer
+		pointer.previousKey = key
+		currentPointer = currentPointer.nextKey.nextPointer
+	}
+	poiner := internalNode.getPointer(2)
+	log.Println(poiner)
+}
+
 func Test_InsertRandom700Values(t *testing.T) {
 	tree := initTree(2)
-	for i := 1; i < 700; i++ {
-		tree.Insert(rand.Int63n(1000), "")
+	for i := 0; i < 30; i++ {
+		tree.Insert(rand.Int63n(10000), "")
 	}
 	tree.PrintTree()
 }
