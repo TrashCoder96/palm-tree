@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 )
 
@@ -37,22 +36,60 @@ type BPlusTreeNode struct {
 }
 
 func (bptn *BPlusTreeNode) getPointer(key int64) *bPlusTreePointer {
-	return nil
+	currentKey := bptn.internalNodeHead.nextKey
+	currentKeyValueMoreOrEqualsKey := false
+	currentKeyIsLastKey := false
+	for {
+		currentKeyValueMoreOrEqualsKey = currentKey.value >= key
+		currentKeyIsLastKey = currentKey.nextPointer.nextKey == nil
+		if currentKeyValueMoreOrEqualsKey || currentKeyIsLastKey {
+			break
+		} else {
+			currentKey = currentKey.nextPointer.nextKey
+		}
+	}
+	if currentKeyIsLastKey && !currentKeyValueMoreOrEqualsKey {
+		return currentKey.nextPointer
+	} else if !currentKeyIsLastKey && currentKeyValueMoreOrEqualsKey {
+		return currentKey.previousPointer
+	} else {
+		panic("Operation is not allowed!!!")
+	}
 }
 
 func (bptn *BPlusTreeNode) insertToLeafNode(key int64, value string) {
 	newLeaf := bPlusTreeKey{value: key}
-	currentLeaf := bptn.leafHead
-	var previousLeaf *bPlusTreeKey
-	for currentLeaf != nil && currentLeaf.value <= key {
-		previousLeaf = currentLeaf
-		currentLeaf = currentLeaf.nextKey
-	}
-	newLeaf.nextKey = currentLeaf
-	if previousLeaf != nil {
-		previousLeaf.nextKey = &newLeaf
-	} else {
+	if bptn.leafHead == nil {
 		bptn.leafHead = &newLeaf
+	} else {
+		currentLeaf := bptn.leafHead
+		currentKeyValueMoreOrEqualsKey := false
+		currentKeyIsLastKey := false
+		for {
+			currentKeyIsLastKey = currentLeaf.nextKey == nil
+			currentKeyValueMoreOrEqualsKey = currentLeaf.value >= key
+			if currentKeyValueMoreOrEqualsKey || currentKeyIsLastKey {
+				//append after currentLeaf
+				break
+			} else {
+				currentLeaf = currentLeaf.nextKey
+			}
+		}
+		if currentKeyValueMoreOrEqualsKey && currentLeaf != bptn.leafHead {
+			newLeaf.nextKey = currentLeaf
+			currentLeaf.previousKey.nextKey = &newLeaf
+			newLeaf.previousKey = currentLeaf.previousKey
+			currentLeaf.previousKey = &newLeaf
+		} else if currentLeaf == bptn.leafHead {
+			newLeaf.nextKey = currentLeaf
+			currentLeaf.previousKey = &newLeaf
+			bptn.leafHead = &newLeaf
+		} else if currentKeyIsLastKey {
+			currentLeaf.nextKey = &newLeaf
+			newLeaf.previousKey = currentLeaf
+		} else {
+			panic("Operation is not allowed")
+		}
 	}
 	bptn.countOfKeys = bptn.countOfKeys + 1
 }
@@ -151,8 +188,7 @@ func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlu
 		}
 		return nil
 	}
-	log.Panicln("Panic! Operation not allowed. Tree node is nil")
-	return nil
+	panic("Operation is not allowed")
 }
 
 //Insert function

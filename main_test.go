@@ -85,6 +85,98 @@ func Test_DevideByTwoLeafNodes(t *testing.T) {
 	t.Log()
 }
 
+func Test_AddKeyToLeaf_emptyList(t *testing.T) {
+	node := &BPlusTreeNode{isLeaf: true}
+	node.insertToLeafNode(1, "value")
+	if node.countOfKeys != 1 {
+		t.FailNow()
+	}
+	if node.leafHead.value != 1 {
+		t.FailNow()
+	}
+	if node.leafHead.nextKey != nil {
+		t.FailNow()
+	}
+}
+
+func Test_AddKeyToLeaf_appendToTail(t *testing.T) {
+	leafNode := BPlusTreeNode{
+		isLeaf: true,
+	}
+	leafNode.leafHead = &bPlusTreeKey{value: 1}
+	currentTailKey := leafNode.leafHead
+	for i := 1; i < 3; i++ {
+		leafNode.countOfKeys = leafNode.countOfKeys + 1
+		key := &bPlusTreeKey{
+			value: int64(i*10 + 1),
+		}
+		currentTailKey.nextKey = key
+		key.previousKey = currentTailKey
+		currentTailKey = currentTailKey.nextKey
+	}
+	leafNode.insertToLeafNode(31, "value")
+	currentKey := leafNode.leafHead
+	for i := 0; i < 4; i++ {
+		if currentKey.value != int64(i*10+1) {
+			t.FailNow()
+		}
+		currentKey = currentKey.nextKey
+	}
+}
+
+func Test_AddKeyWithinLeafArray(t *testing.T) {
+	leafNode := BPlusTreeNode{
+		isLeaf: true,
+	}
+	leafNode.leafHead = &bPlusTreeKey{value: 1}
+	currentTailKey := leafNode.leafHead
+	for i := 1; i < 10; i++ {
+		if i == 6 {
+			continue
+		}
+		leafNode.countOfKeys = leafNode.countOfKeys + 1
+		key := &bPlusTreeKey{
+			value: int64(i*10 + 1),
+		}
+		currentTailKey.nextKey = key
+		key.previousKey = currentTailKey
+		currentTailKey = currentTailKey.nextKey
+	}
+	leafNode.insertToLeafNode(61, "value")
+	currentKey := leafNode.leafHead
+	for i := 0; i < 10; i++ {
+		if currentKey.value != int64(i*10+1) {
+			t.FailNow()
+		}
+		currentKey = currentKey.nextKey
+	}
+}
+
+func Test_AddKeyAtStartOfList(t *testing.T) {
+	leafNode := BPlusTreeNode{
+		isLeaf: true,
+	}
+	leafNode.leafHead = &bPlusTreeKey{value: 1}
+	currentTailKey := leafNode.leafHead
+	for i := 1; i < 3; i++ {
+		leafNode.countOfKeys = leafNode.countOfKeys + 1
+		key := &bPlusTreeKey{
+			value: int64(i*10 + 1),
+		}
+		currentTailKey.nextKey = key
+		key.previousKey = currentTailKey
+		currentTailKey = currentTailKey.nextKey
+	}
+	leafNode.insertToLeafNode(-9, "value")
+	currentKey := leafNode.leafHead
+	for i := -1; i < 3; i++ {
+		if currentKey.value != int64(i*10+1) {
+			t.FailNow()
+		}
+		currentKey = currentKey.nextKey
+	}
+}
+
 func Test_Insert10Values(t *testing.T) {
 	tree := initTree(2)
 	for i := 1; i < 700; i++ {
