@@ -115,8 +115,9 @@ func (bptn *BPlusTreeNode) cutByTwoNodes() *bPlusTreePointer {
 		currentKey.previousKey.nextKey = nil
 		currentKey.previousKey = nil
 		middleKey.value = currentKey.value
-		bptn.countOfKeys = bptn.countOfKeys / 2
-		tail.countOfKeys = bptn.countOfKeys / 2
+		countInNode := bptn.countOfKeys / 2
+		bptn.countOfKeys = countInNode
+		tail.countOfKeys = countInNode
 	} else {
 		//devide by two internal nodes
 		currentKey = bptn.internalNodeHead.nextKey
@@ -130,8 +131,9 @@ func (bptn *BPlusTreeNode) cutByTwoNodes() *bPlusTreePointer {
 		middleKey.value = currentKey.value
 		currentKey.previousPointer.nextKey = nil
 		currentKey.nextPointer.previousKey = nil
-		bptn.countOfKeys = bptn.countOfKeys / 2
-		tail.countOfKeys = bptn.countOfKeys/2 - 1
+		countInNode := bptn.countOfKeys / 2
+		bptn.countOfKeys = countInNode
+		tail.countOfKeys = countInNode - 1
 	}
 	leftPointer := &bPlusTreePointer{
 		childNode: bptn,
@@ -187,7 +189,7 @@ func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlu
 				currentPointer.previousKey.nextPointer = subtreeLeftPointer
 				subtreeLeftPointer.previousKey = currentPointer.previousKey
 				subtreeRightPointer.nextKey = currentPointer.nextKey
-				currentPointer.nextKey.nextPointer = subtreeRightPointer
+				currentPointer.nextKey.previousPointer = subtreeRightPointer
 			}
 			node.countOfKeys = node.countOfKeys + 1
 			if node.countOfKeys > 2*bpt.order-1 {

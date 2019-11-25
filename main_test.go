@@ -211,10 +211,7 @@ func Test_GetPointer_oneKey(t *testing.T) {
 
 func Test_InsertRandom700Values(t *testing.T) {
 	tree := initTree(2)
-	for i := 0; i < 30; i++ {
-		if i == 24 {
-			log.Println()
-		}
+	for i := 0; i < 300; i++ {
 		tree.Insert(rand.Int63n(10000), "")
 	}
 	tree.PrintTree()
