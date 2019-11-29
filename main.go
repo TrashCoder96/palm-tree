@@ -22,17 +22,26 @@ type BPlusTree struct {
 	root  *BPlusTreeNode
 }
 
-//PrintTree struct
-func (bpt *BPlusTree) PrintTree() {
-
-}
-
 //BPlusTreeNode struct
 type BPlusTreeNode struct {
 	countOfKeys      int
 	isLeaf           bool
 	internalNodeHead *bPlusTreePointer //only for internal node
 	leafHead         *bPlusTreeKey     //only for leaf node
+}
+
+type bPlusTreeKey struct {
+	value           int64
+	nextPointer     *bPlusTreePointer
+	nextKey         *bPlusTreeKey
+	previousKey     *bPlusTreeKey
+	previousPointer *bPlusTreePointer
+}
+
+type bPlusTreePointer struct {
+	nextKey     *bPlusTreeKey
+	previousKey *bPlusTreeKey
+	childNode   *BPlusTreeNode
 }
 
 func (bptn *BPlusTreeNode) getPointer(key int64) *bPlusTreePointer {
@@ -148,20 +157,6 @@ func (bptn *BPlusTreeNode) cutByTwoNodes() *bPlusTreePointer {
 	return leftPointer
 }
 
-type bPlusTreeKey struct {
-	value           int64
-	nextPointer     *bPlusTreePointer
-	nextKey         *bPlusTreeKey
-	previousKey     *bPlusTreeKey
-	previousPointer *bPlusTreePointer
-}
-
-type bPlusTreePointer struct {
-	nextKey     *bPlusTreeKey
-	previousKey *bPlusTreeKey
-	childNode   *BPlusTreeNode
-}
-
 func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlusTreePointer {
 	if node != nil {
 		if node.isLeaf {
@@ -225,17 +220,19 @@ func (bpt *BPlusTree) Insert(key int64, value string) {
 
 func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
 	currentLeaf := bptn.leafHead
-	var previousLeaf *bPlusTreeKey
 	for currentLeaf != nil {
 		if currentLeaf.value == key {
-			if previousLeaf != nil {
-				previousLeaf.nextKey = currentLeaf.nextKey.nextKey
+			if currentLeaf.previousKey == nil {
+				bptn.leafHead = currentLeaf.nextKey
+				currentLeaf.nextKey.previousKey = nil
+			} else if currentLeaf.nextKey == nil {
+				currentLeaf.previousKey.nextKey = nil
 			} else {
-				bptn.leafHead = currentLeaf.nextKey.nextKey
+				currentLeaf.previousKey.nextKey = currentLeaf.nextKey
+				currentLeaf.nextKey.previousKey = currentLeaf.previousKey
 			}
 			return true
 		}
-		previousLeaf = currentLeaf
 		currentLeaf = currentLeaf.nextKey
 	}
 	return false
