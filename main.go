@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 )
 
@@ -218,6 +219,93 @@ func (bpt *BPlusTree) Insert(key int64, value string) {
 	}
 }
 
+//Delete function
+func (bpt *BPlusTree) Delete(key int64) {
+	bpt.delete(key, bpt.root)
+}
+
+func (bpt *BPlusTree) delete(key int64, node *BPlusTreeNode) error {
+	if node != nil {
+		if node.isLeaf {
+			if ok := node.deleteFromLeafNode(key); ok {
+				return nil
+			}
+			return errors.New("Key not found")
+		}
+		currentPointer := node.getPointer(key)
+		if itemNotFoundErr := bpt.delete(key, currentPointer.childNode); itemNotFoundErr != nil {
+			return itemNotFoundErr
+		}
+		if currentPointer.nextKey == nil {
+			bpt.redistributeNodesIfPossible(currentPointer.previousKey.previousPointer)
+		} else {
+			bpt.redistributeNodesIfPossible(currentPointer)
+		}
+		return nil
+	}
+	panic("Operation is not allowed")
+}
+
+func (bpt *BPlusTree) redistributeNodesIfPossible(subtree *bPlusTreePointer) {
+	leftPointer := subtree
+	middleKey := leftPointer.nextKey
+	rightPointer := middleKey.nextPointer
+	leftPointerChildNodeLessThanOrderMinusOne := leftPointer.childNode.countOfKeys <= bpt.order-1
+	rightPointerChildNodeLessThanOrderMinusOne := rightPointer.childNode.countOfKeys <= bpt.order-1
+	if leftPointer.childNode.isLeaf && rightPointer.childNode.isLeaf {
+		if leftPointerChildNodeLessThanOrderMinusOne && rightPointerChildNodeLessThanOrderMinusOne {
+			tailKey := leftPointer.childNode.leafHead
+			for tailKey.nextKey != nil {
+				tailKey = tailKey.nextKey
+			}
+			tailKey.nextKey = rightPointer.childNode.leafHead
+			rightPointer.childNode.leafHead.previousKey = tailKey
+			leftPointer.nextKey = leftPointer.nextKey.nextPointer.nextKey
+		} else if leftPointerChildNodeLessThanOrderMinusOne {
+			leftPointer.childNode.insertToLeafNode(rightPointer.childNode.leafHead.value, "")
+			rightPointer.childNode.deleteFromLeafNode(rightPointer.childNode.leafHead.value)
+			middleKey.value = rightPointer.childNode.leafHead.value
+		} else if rightPointerChildNodeLessThanOrderMinusOne {
+			rightPointer.childNode.insertToLeafNode(leftPointer.childNode.leafHead.value, "")
+			leftPointer.childNode.deleteFromLeafNode(leftPointer.childNode.leafHead.value)
+			middleKey.value = rightPointer.childNode.leafHead.value
+		}
+	} else {
+		tailPointer := leftPointer.childNode.internalNodeHead
+		for tailPointer.nextKey != nil {
+			tailPointer = tailPointer.nextKey.nextPointer
+		}
+		if leftPointerChildNodeLessThanOrderMinusOne && rightPointerChildNodeLessThanOrderMinusOne {
+			tailPointer.nextKey = middleKey
+			middleKey.previousPointer = tailPointer
+			middleKey.nextPointer = rightPointer.childNode.internalNodeHead
+			rightPointer.childNode.internalNodeHead.previousKey = middleKey
+			leftPointer.nextKey = leftPointer.nextKey.nextPointer.nextKey
+		} else if leftPointerChildNodeLessThanOrderMinusOne {
+			newKey := bPlusTreeKey{
+				value:           middleKey.value,
+				previousPointer: tailPointer,
+				nextPointer:     rightPointer.childNode.internalNodeHead,
+			}
+			tailPointer.nextKey = &newKey
+			rightPointer.childNode.internalNodeHead.previousKey = &newKey
+			middleKey.value = rightPointer.childNode.internalNodeHead.nextKey.value
+			rightPointer.childNode.internalNodeHead = rightPointer.childNode.internalNodeHead.nextKey.nextPointer
+			rightPointer.childNode.internalNodeHead.previousKey = nil
+			tailPointer.nextKey.nextPointer.nextKey = nil
+		} else if rightPointerChildNodeLessThanOrderMinusOne {
+			newKey := tailPointer.previousKey
+			newKey.previousPointer.nextKey = nil
+			newKey.nextPointer = rightPointer.childNode.internalNodeHead
+			rightPointer.childNode.internalNodeHead.previousKey = newKey
+			tailPointer.nextKey = newKey
+			tailPointer.previousKey = nil
+			rightPointer.childNode.internalNodeHead = tailPointer
+			middleKey.value, rightPointer.childNode.internalNodeHead.nextKey.value = middleKey.value, rightPointer.childNode.internalNodeHead.nextKey.value
+		}
+	}
+}
+
 func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
 	currentLeaf := bptn.leafHead
 	for currentLeaf != nil {
@@ -231,6 +319,7 @@ func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
 				currentLeaf.previousKey.nextKey = currentLeaf.nextKey
 				currentLeaf.nextKey.previousKey = currentLeaf.previousKey
 			}
+			bptn.countOfKeys = bptn.countOfKeys - 1
 			return true
 		}
 		currentLeaf = currentLeaf.nextKey
