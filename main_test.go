@@ -103,7 +103,8 @@ func Test_AddKeyToLeaf_emptyList(t *testing.T) {
 
 func Test_AddKeyToLeaf_appendToTail(t *testing.T) {
 	leafNode := BPlusTreeNode{
-		isLeaf: true,
+		isLeaf:      true,
+		countOfKeys: 1,
 	}
 	leafNode.leafHead = &bPlusTreeKey{value: 1}
 	currentTailKey := leafNode.leafHead
@@ -184,7 +185,6 @@ func Test_Insert700Values(t *testing.T) {
 	for i := 1; i < 700; i++ {
 		tree.Insert(int64(i), "")
 	}
-	tree.PrintTree()
 }
 
 func Test_GetPointer_oneKey(t *testing.T) {
@@ -214,5 +214,4 @@ func Test_InsertRandom700Values(t *testing.T) {
 	for i := 0; i < 300; i++ {
 		tree.Insert(rand.Int63n(10000), "")
 	}
-	tree.PrintTree()
 }

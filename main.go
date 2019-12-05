@@ -78,33 +78,32 @@ func (bptn *BPlusTreeNode) insertToLeafNode(key int64, value string) {
 	if bptn.leafHead == nil {
 		bptn.leafHead = &newLeaf
 	} else {
+		foundNextLeaf := false
 		currentLeaf := bptn.leafHead
-		currentKeyValueMoreOrEqualsKey := false
-		currentKeyIsLastKey := false
-		for {
-			currentKeyIsLastKey = currentLeaf.nextKey == nil
-			currentKeyValueMoreOrEqualsKey = currentLeaf.value >= key
-			if currentKeyValueMoreOrEqualsKey || currentKeyIsLastKey {
-				//append after currentLeaf
-				break
-			} else {
+		for i := 0; i < bptn.countOfKeys-1; i++ {
+			if currentLeaf.value < key {
 				currentLeaf = currentLeaf.nextKey
+			} else {
+				foundNextLeaf = true
+				break
 			}
 		}
-		if currentKeyValueMoreOrEqualsKey && currentLeaf != bptn.leafHead {
+		newLeaf = bPlusTreeKey{
+			value: key,
+		}
+		if foundNextLeaf {
 			newLeaf.nextKey = currentLeaf
-			currentLeaf.previousKey.nextKey = &newLeaf
-			newLeaf.previousKey = currentLeaf.previousKey
-			currentLeaf.previousKey = &newLeaf
-		} else if currentLeaf == bptn.leafHead {
-			newLeaf.nextKey = currentLeaf
-			currentLeaf.previousKey = &newLeaf
-			bptn.leafHead = &newLeaf
-		} else if currentKeyIsLastKey {
+			if currentLeaf.previousKey == nil {
+				currentLeaf.previousKey = &newLeaf
+				bptn.leafHead = &newLeaf
+			} else {
+				newLeaf.previousKey = currentLeaf.previousKey
+				currentLeaf.previousKey.nextKey = &newLeaf
+				currentLeaf.previousKey = &newLeaf
+			}
+		} else {
 			currentLeaf.nextKey = &newLeaf
 			newLeaf.previousKey = currentLeaf
-		} else {
-			panic("Operation is not allowed")
 		}
 	}
 	bptn.countOfKeys = bptn.countOfKeys + 1
@@ -237,16 +236,16 @@ func (bpt *BPlusTree) delete(key int64, node *BPlusTreeNode) error {
 			return itemNotFoundErr
 		}
 		if currentPointer.nextKey == nil {
-			bpt.redistributeNodesIfPossible(currentPointer.previousKey.previousPointer)
+			bpt.redistributeNodesIfPossible(currentPointer.previousKey.previousPointer, node)
 		} else {
-			bpt.redistributeNodesIfPossible(currentPointer)
+			bpt.redistributeNodesIfPossible(currentPointer, node)
 		}
 		return nil
 	}
 	panic("Operation is not allowed")
 }
 
-func (bpt *BPlusTree) redistributeNodesIfPossible(subtree *bPlusTreePointer) {
+func (bpt *BPlusTree) redistributeNodesIfPossible(subtree *bPlusTreePointer, node *BPlusTreeNode) {
 	leftPointer := subtree
 	middleKey := leftPointer.nextKey
 	rightPointer := middleKey.nextPointer
@@ -261,6 +260,7 @@ func (bpt *BPlusTree) redistributeNodesIfPossible(subtree *bPlusTreePointer) {
 			tailKey.nextKey = rightPointer.childNode.leafHead
 			rightPointer.childNode.leafHead.previousKey = tailKey
 			leftPointer.nextKey = leftPointer.nextKey.nextPointer.nextKey
+			node.countOfKeys = node.countOfKeys - 1
 		} else if leftPointerChildNodeLessThanOrderMinusOne {
 			leftPointer.childNode.insertToLeafNode(rightPointer.childNode.leafHead.value, "")
 			rightPointer.childNode.deleteFromLeafNode(rightPointer.childNode.leafHead.value)
@@ -281,6 +281,7 @@ func (bpt *BPlusTree) redistributeNodesIfPossible(subtree *bPlusTreePointer) {
 			middleKey.nextPointer = rightPointer.childNode.internalNodeHead
 			rightPointer.childNode.internalNodeHead.previousKey = middleKey
 			leftPointer.nextKey = leftPointer.nextKey.nextPointer.nextKey
+			node.countOfKeys = node.countOfKeys - 1
 		} else if leftPointerChildNodeLessThanOrderMinusOne {
 			newKey := bPlusTreeKey{
 				value:           middleKey.value,
@@ -301,7 +302,7 @@ func (bpt *BPlusTree) redistributeNodesIfPossible(subtree *bPlusTreePointer) {
 			tailPointer.nextKey = newKey
 			tailPointer.previousKey = nil
 			rightPointer.childNode.internalNodeHead = tailPointer
-			middleKey.value, rightPointer.childNode.internalNodeHead.nextKey.value = middleKey.value, rightPointer.childNode.internalNodeHead.nextKey.value
+			middleKey.value, rightPointer.childNode.internalNodeHead.nextKey.value = rightPointer.childNode.internalNodeHead.nextKey.value, middleKey.value
 		}
 	}
 }
