@@ -249,62 +249,117 @@ func (bpt *BPlusTree) redistributeNodesIfPossible(subtree *bPlusTreePointer, nod
 	leftPointer := subtree
 	middleKey := leftPointer.nextKey
 	rightPointer := middleKey.nextPointer
-	leftPointerChildNodeLessThanOrderMinusOne := leftPointer.childNode.countOfKeys <= bpt.order-1
-	rightPointerChildNodeLessThanOrderMinusOne := rightPointer.childNode.countOfKeys <= bpt.order-1
-	if leftPointer.childNode.isLeaf && rightPointer.childNode.isLeaf {
-		if leftPointerChildNodeLessThanOrderMinusOne && rightPointerChildNodeLessThanOrderMinusOne {
-			tailKey := leftPointer.childNode.leafHead
-			for tailKey.nextKey != nil {
-				tailKey = tailKey.nextKey
-			}
-			tailKey.nextKey = rightPointer.childNode.leafHead
-			rightPointer.childNode.leafHead.previousKey = tailKey
-			leftPointer.nextKey = leftPointer.nextKey.nextPointer.nextKey
-			node.countOfKeys = node.countOfKeys - 1
-		} else if leftPointerChildNodeLessThanOrderMinusOne {
-			leftPointer.childNode.insertToLeafNode(rightPointer.childNode.leafHead.value, "")
-			rightPointer.childNode.deleteFromLeafNode(rightPointer.childNode.leafHead.value)
-			middleKey.value = rightPointer.childNode.leafHead.value
-		} else if rightPointerChildNodeLessThanOrderMinusOne {
-			rightPointer.childNode.insertToLeafNode(leftPointer.childNode.leafHead.value, "")
-			leftPointer.childNode.deleteFromLeafNode(leftPointer.childNode.leafHead.value)
-			middleKey.value = rightPointer.childNode.leafHead.value
+	leftPointerChildNodeLessThanOrderMinusOne := leftPointer.childNode.countOfKeys <= bpt.order-1   //t - 1
+	rightPointerChildNodeLessThanOrderMinusOne := rightPointer.childNode.countOfKeys <= bpt.order-1 //t - 1
+	if leftPointerChildNodeLessThanOrderMinusOne && rightPointerChildNodeLessThanOrderMinusOne {
+		merge(subtree)
+	} else if leftPointerChildNodeLessThanOrderMinusOne && !rightPointerChildNodeLessThanOrderMinusOne {
+		moveToLeftNode(subtree)
+	} else if !leftPointerChildNodeLessThanOrderMinusOne && rightPointerChildNodeLessThanOrderMinusOne {
+		moveToRightNode(subtree)
+	}
+}
+
+func moveToLeftNode(subtree *bPlusTreePointer) {
+	leftPointer := subtree
+	middleKey := leftPointer.nextKey
+	rightPointer := middleKey.nextPointer
+	lowLevelIsLeaves := leftPointer.childNode.isLeaf && rightPointer.childNode.isLeaf
+	if lowLevelIsLeaves {
+		movedItem := rightPointer.childNode.leafHead
+		rightPointer.childNode.leafHead = rightPointer.childNode.leafHead.nextKey
+		movedItem.nextKey = nil
+		tailKey := leftPointer.childNode.leafHead
+		for tailKey.nextKey != nil {
+			tailKey = tailKey.nextKey
+		}
+		tailKey.nextKey = movedItem
+		movedItem.previousKey = tailKey
+		middleKey.value = rightPointer.childNode.leafHead.value
+	} else {
+		tailPointer := leftPointer.childNode.internalNodeHead
+		for tailPointer.nextKey != nil {
+			tailPointer = tailPointer.nextKey.nextPointer
+		}
+		newKey := bPlusTreeKey{
+			value:           middleKey.value,
+			nextPointer:     rightPointer.childNode.internalNodeHead,
+			previousPointer: tailPointer,
+		}
+		tailPointer.nextKey = &newKey
+		rightPointer.childNode.internalNodeHead.previousKey = &newKey
+		middleKey.value = rightPointer.childNode.internalNodeHead.nextKey.value
+		rightPointer.childNode.internalNodeHead = rightPointer.childNode.internalNodeHead.nextKey.nextPointer
+		newKey.nextPointer.nextKey = nil
+	}
+	leftPointer.childNode.countOfKeys = leftPointer.childNode.countOfKeys + 1
+	rightPointer.childNode.countOfKeys = rightPointer.childNode.countOfKeys - 1
+}
+
+func moveToRightNode(subtree *bPlusTreePointer) {
+	leftPointer := subtree
+	middleKey := leftPointer.nextKey
+	rightPointer := middleKey.nextPointer
+	lowLevelIsLeaves := leftPointer.childNode.isLeaf && rightPointer.childNode.isLeaf
+	if lowLevelIsLeaves {
+		tailKey := leftPointer.childNode.leafHead
+		for tailKey.nextKey != nil {
+			tailKey = tailKey.nextKey
+		}
+		tailKey.previousKey = nil
+		tailKey.nextKey = rightPointer.childNode.leafHead
+		rightPointer.childNode.leafHead.previousKey = tailKey
+		rightPointer.childNode.leafHead = tailKey
+		middleKey.value = rightPointer.childNode.leafHead.value
+	} else {
+		tailPointer := leftPointer.childNode.internalNodeHead
+		for tailPointer.nextKey != nil {
+			tailPointer = tailPointer.nextKey.nextPointer
+		}
+		newKey := bPlusTreeKey{
+			value:           middleKey.value,
+			nextPointer:     rightPointer.childNode.internalNodeHead,
+			previousPointer: tailPointer,
+		}
+		tailPointer.nextKey = &newKey
+		tailPointer.previousKey = nil
+		rightPointer.childNode.internalNodeHead.previousKey = &newKey
+	}
+	leftPointer.childNode.countOfKeys = leftPointer.childNode.countOfKeys - 1
+	rightPointer.childNode.countOfKeys = rightPointer.childNode.countOfKeys + 1
+}
+
+func merge(subtree *bPlusTreePointer) {
+	leftPointer := subtree
+	middleKey := leftPointer.nextKey
+	rightPointer := middleKey.nextPointer
+	lowLevelIsLeaves := leftPointer.childNode.isLeaf && rightPointer.childNode.isLeaf
+	if lowLevelIsLeaves {
+		tailLeaf := leftPointer.childNode.leafHead
+		for tailLeaf.nextKey != nil {
+			tailLeaf = tailLeaf.nextKey
+		}
+		tailLeaf.nextKey = rightPointer.childNode.leafHead
+		rightPointer.childNode.leafHead.previousKey = tailLeaf
+		leftPointer.nextKey = rightPointer.nextKey
+		if rightPointer.nextKey != nil {
+			rightPointer.nextKey.previousPointer = rightPointer
 		}
 	} else {
 		tailPointer := leftPointer.childNode.internalNodeHead
 		for tailPointer.nextKey != nil {
 			tailPointer = tailPointer.nextKey.nextPointer
 		}
-		if leftPointerChildNodeLessThanOrderMinusOne && rightPointerChildNodeLessThanOrderMinusOne {
-			tailPointer.nextKey = middleKey
-			middleKey.previousPointer = tailPointer
-			middleKey.nextPointer = rightPointer.childNode.internalNodeHead
-			rightPointer.childNode.internalNodeHead.previousKey = middleKey
-			leftPointer.nextKey = leftPointer.nextKey.nextPointer.nextKey
-			node.countOfKeys = node.countOfKeys - 1
-		} else if leftPointerChildNodeLessThanOrderMinusOne {
-			newKey := bPlusTreeKey{
-				value:           middleKey.value,
-				previousPointer: tailPointer,
-				nextPointer:     rightPointer.childNode.internalNodeHead,
-			}
-			tailPointer.nextKey = &newKey
-			rightPointer.childNode.internalNodeHead.previousKey = &newKey
-			middleKey.value = rightPointer.childNode.internalNodeHead.nextKey.value
-			rightPointer.childNode.internalNodeHead = rightPointer.childNode.internalNodeHead.nextKey.nextPointer
-			rightPointer.childNode.internalNodeHead.previousKey = nil
-			tailPointer.nextKey.nextPointer.nextKey = nil
-		} else if rightPointerChildNodeLessThanOrderMinusOne {
-			newKey := tailPointer.previousKey
-			newKey.previousPointer.nextKey = nil
-			newKey.nextPointer = rightPointer.childNode.internalNodeHead
-			rightPointer.childNode.internalNodeHead.previousKey = newKey
-			tailPointer.nextKey = newKey
-			tailPointer.previousKey = nil
-			rightPointer.childNode.internalNodeHead = tailPointer
-			middleKey.value, rightPointer.childNode.internalNodeHead.nextKey.value = rightPointer.childNode.internalNodeHead.nextKey.value, middleKey.value
+		tailPointer.nextKey = middleKey
+		middleKey.previousPointer = tailPointer
+		middleKey.nextPointer = leftPointer.childNode.internalNodeHead
+		leftPointer.childNode.internalNodeHead.previousKey = middleKey
+		leftPointer.nextKey = rightPointer.nextKey
+		if rightPointer.nextKey != nil {
+			rightPointer.nextKey.previousPointer = rightPointer
 		}
 	}
+	leftPointer.childNode.countOfKeys += rightPointer.childNode.countOfKeys
 }
 
 func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
