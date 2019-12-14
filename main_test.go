@@ -205,13 +205,21 @@ func Test_GetPointer_oneKey(t *testing.T) {
 		pointer.previousKey = key
 		currentPointer = currentPointer.nextKey.nextPointer
 	}
-	poiner := internalNode.getPointer(2)
-	log.Println(poiner)
+	pointer := internalNode.getPointer(2)
+	log.Println(pointer)
 }
 
 func Test_InsertRandom700Values(t *testing.T) {
 	tree := initTree(2)
-	for i := 0; i < 300; i++ {
-		tree.Insert(rand.Int63n(10000), "")
+	keys := make([]int64, 0, 10)
+	for i := 0; i < 10; i++ {
+		keys = append(keys, rand.Int63n(10000))
+		tree.Insert(keys[i], "")
+	}
+	//8315, 8397
+	for i := 0; i < 10; i++ {
+		if found := tree.Find(keys[i]); !found {
+			t.FailNow()
+		}
 	}
 }

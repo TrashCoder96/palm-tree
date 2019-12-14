@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 )
 
@@ -223,7 +224,33 @@ func (bpt *BPlusTree) Delete(key int64) {
 	bpt.delete(key, bpt.root)
 }
 
+//Find function
+func (bpt *BPlusTree) Find(key int64) bool {
+	return bpt.find(key, bpt.root)
+}
+
+func (bpt *BPlusTree) find(key int64, node *BPlusTreeNode) bool {
+	if node != nil {
+		if node.isLeaf {
+			leaf := node.leafHead
+			for leaf != nil && leaf.value != key {
+				leaf = leaf.nextKey
+			}
+			if leaf == nil {
+				return false
+			}
+			return true
+		}
+		pointer := node.getPointer(key)
+		return bpt.find(key, pointer.childNode)
+	}
+	panic("Operation is not allowed")
+}
+
 func (bpt *BPlusTree) delete(key int64, node *BPlusTreeNode) error {
+	if key == 8449 {
+		fmt.Println(key)
+	}
 	if node != nil {
 		if node.isLeaf {
 			if ok := node.deleteFromLeafNode(key); ok {
