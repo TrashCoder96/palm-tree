@@ -110,6 +110,52 @@ func (bptn *BPlusTreeNode) insertToLeafNode(key int64, value string) {
 	bptn.countOfKeys = bptn.countOfKeys + 1
 }
 
+func cutIfPossible(pointer *bPlusTreePointer) {
+	leftPointer := pointer
+	newKey := bPlusTreeKey{
+		previousPointer: leftPointer,
+	}
+	rightPointer := bPlusTreePointer{
+		previousKey: &newKey,
+		nextKey:     pointer.nextKey,
+	}
+	newKey.nextPointer = &rightPointer
+	if pointer.nextKey != nil {
+		pointer.nextKey.previousPointer = &rightPointer
+	}
+	leftPointer.nextKey = &newKey
+	leftNode := pointer.childNode
+	if pointer.childNode.isLeaf {
+		rightNode := BPlusTreeNode{
+			isLeaf:      true,
+			countOfKeys: leftNode.countOfKeys / 2,
+		}
+		keyBeforeNextNode := leftNode.leafHead
+		for i := 1; i < leftNode.countOfKeys/2; i++ {
+			keyBeforeNextNode = keyBeforeNextNode.nextKey
+		}
+		leftNode.countOfKeys = rightNode.countOfKeys
+		rightPointer.childNode = &rightNode
+		newKey.value = keyBeforeNextNode.nextKey.value
+		rightNode.leafHead = keyBeforeNextNode.nextKey
+		rightNode.leafHead.previousKey = nil
+		keyBeforeNextNode.nextKey = nil
+	} else {
+		rightNode := BPlusTreeNode{
+			isLeaf:      false,
+			countOfKeys: leftNode.countOfKeys / 2,
+		}
+		pointerBeforeMiddleKey := leftNode.internalNodeHead
+		for i := 1; i < leftNode.countOfKeys/2; i++ {
+			pointerBeforeMiddleKey = pointerBeforeMiddleKey.nextKey.nextPointer
+		}
+		leftNode.countOfKeys = rightNode.countOfKeys - 1
+		rightNode.internalNodeHead = pointerBeforeMiddleKey.nextKey.nextPointer
+		rightNode.internalNodeHead.previousKey = nil
+		pointerBeforeMiddleKey.nextKey = nil
+	}
+}
+
 func (bptn *BPlusTreeNode) cutByTwoNodes() *bPlusTreePointer {
 	tail := &BPlusTreeNode{}
 	middleKey := &bPlusTreeKey{}
