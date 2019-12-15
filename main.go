@@ -156,60 +156,22 @@ func cutIfPossible(pointer *bPlusTreePointer) {
 	}
 }
 
-func (bptn *BPlusTreeNode) cutByTwoNodes() *bPlusTreePointer {
-	tail := &BPlusTreeNode{}
-	middleKey := &bPlusTreeKey{}
-	var currentKey *bPlusTreeKey
-	if bptn.isLeaf {
-		//devide by two leaf nodes
-		currentKey = bptn.leafHead
-		for i := 0; i < bptn.countOfKeys/2; i++ {
-			currentKey = currentKey.nextKey
+func (bpt *BPlusTree) insert(key int64, value string, pointerToNode *bPlusTreePointer) {
+	if pointerToNode.childNode.isLeaf {
+		pointerToNode.childNode.insertToLeafNode(key, value)
+		if pointerToNode.childNode.countOfKeys > 2*bpt.order-1 {
+			cutIfPossible(pointerToNode)
 		}
-		tail.isLeaf = true
-		tail.leafHead = currentKey
-		currentKey.previousKey.nextKey = nil
-		currentKey.previousKey = nil
-		middleKey.value = currentKey.value
-		countInNode := bptn.countOfKeys / 2
-		bptn.countOfKeys = countInNode
-		tail.countOfKeys = countInNode
-	} else {
-		//devide by two internal nodes
-		currentKey = bptn.internalNodeHead.nextKey
-		for i := 0; i < bptn.countOfKeys/2; i++ {
-			currentKey = currentKey.nextPointer.nextKey
-		}
-		tail.internalNodeHead = &bPlusTreePointer{
-			nextKey:   currentKey.nextPointer.nextKey,
-			childNode: currentKey.nextPointer.childNode,
-		}
-		middleKey.value = currentKey.value
-		currentKey.previousPointer.nextKey = nil
-		currentKey.nextPointer.previousKey = nil
-		countInNode := bptn.countOfKeys / 2
-		bptn.countOfKeys = countInNode
-		tail.countOfKeys = countInNode - 1
 	}
-	leftPointer := &bPlusTreePointer{
-		childNode: bptn,
-		nextKey:   middleKey,
+	suitablePointer := pointerToNode.childNode.getPointer(key)
+	bpt.insert(key, value, suitablePointer)
+	if suitablePointer.childNode.countOfKeys > 2*bpt.order-1 {
+		cutIfPossible(suitablePointer)
 	}
-	rightPointer := &bPlusTreePointer{
-		childNode:   tail,
-		previousKey: middleKey,
-	}
-	middleKey.nextPointer = rightPointer
-	middleKey.previousPointer = leftPointer
-	return leftPointer
-}
-
-func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlusTreePointer {
-	if node != nil {
+	/*if node != nil {
 		if node.isLeaf {
 			node.insertToLeafNode(key, value)
 			if node.countOfKeys > 2*bpt.order-1 {
-				subtree := node.cutByTwoNodes()
 				return subtree
 			}
 			return nil
@@ -241,7 +203,7 @@ func (bpt *BPlusTree) insert(key int64, value string, node *BPlusTreeNode) *bPlu
 		}
 		return nil
 	}
-	panic("Operation is not allowed")
+	panic("Operation is not allowed")*/
 }
 
 //Insert function
