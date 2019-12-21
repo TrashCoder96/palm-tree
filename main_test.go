@@ -1,225 +1,51 @@
 package main
 
-import (
-	"log"
-	"math/rand"
-	"testing"
-)
+import "testing"
 
-func Test_DevideByTwoInternalNodes(t *testing.T) {
-	leafNode := BPlusTreeNode{
-		isLeaf: false,
-	}
-	leafNode.internalNodeHead = &bPlusTreePointer{}
-	currentPointer := leafNode.internalNodeHead
-	for i := 0; i < 10; i++ {
-		leafNode.countOfKeys = leafNode.countOfKeys + 1
-		key := &bPlusTreeKey{
-			value: int64(i*10 + 1),
-		}
-		pointer := &bPlusTreePointer{}
-		key.nextPointer = pointer
-		currentPointer.nextKey = key
-		key.previousPointer = currentPointer
-		pointer.previousKey = key
-		currentPointer = currentPointer.nextKey.nextPointer
-	}
-	subtree := leafNode.cutByTwoNodes()
-	currentPointer = leafNode.internalNodeHead
-	i := 1
-	for currentPointer.nextKey != nil {
-		if currentPointer.nextKey.value != int64(i) {
-			t.FailNow()
-		}
-		currentPointer = currentPointer.nextKey.nextPointer
-		i = i + 10
-	}
-	if subtree.nextKey.value != int64(i) {
-		t.FailNow()
-	}
-	i = i + 10
-	currentPointer = subtree.nextKey.nextPointer.childNode.internalNodeHead
-	for currentPointer.nextKey != nil {
-		if currentPointer.nextKey.value != int64(i) {
-			t.FailNow()
-		}
-		currentPointer = currentPointer.nextKey.nextPointer
-		i = i + 10
-	}
-}
-
-func Test_DevideByTwoLeafNodes(t *testing.T) {
-	leafNode := BPlusTreeNode{
-		isLeaf: true,
-	}
-	leafNode.leafHead = &bPlusTreeKey{value: 1}
-	currentTailKey := leafNode.leafHead
-	for i := 1; i < 6; i++ {
-		leafNode.countOfKeys = leafNode.countOfKeys + 1
-		key := &bPlusTreeKey{
-			value: int64(i*10 + 1),
-		}
-		currentTailKey.nextKey = key
-		key.previousKey = currentTailKey
-		currentTailKey = currentTailKey.nextKey
-	}
-	subtree := leafNode.cutByTwoNodes()
-	currentKey := leafNode.leafHead
-	i := 1
-	for currentKey != nil {
-		if currentKey.value != int64(i) {
-			t.FailNow()
-		}
-		currentKey = currentKey.nextKey
-		i = i + 10
-	}
-	if subtree.nextKey.value != int64(i) {
-		t.FailNow()
-	}
-	currentKey = subtree.nextKey.nextKey
-	for currentKey != nil {
-		if currentKey.value != int64(i) {
-			t.FailNow()
-		}
-		currentKey = currentKey.nextKey
-		i = i + 10
-	}
-	t.Log()
-}
-
-func Test_AddKeyToLeaf_emptyList(t *testing.T) {
-	node := &BPlusTreeNode{isLeaf: true}
-	node.insertToLeafNode(1, "value")
-	if node.countOfKeys != 1 {
-		t.FailNow()
-	}
-	if node.leafHead.value != 1 {
-		t.FailNow()
-	}
-	if node.leafHead.nextKey != nil {
+func TestGetPointer_ok(t *testing.T) {
+	node := initOneTestInternalNode(9)
+	pointer := node.getPointer(11)
+	if !(pointer.previousKey.value == 10 && pointer.nextKey.value == 20) {
 		t.FailNow()
 	}
 }
 
-func Test_AddKeyToLeaf_appendToTail(t *testing.T) {
-	leafNode := BPlusTreeNode{
-		isLeaf:      true,
-		countOfKeys: 1,
-	}
-	leafNode.leafHead = &bPlusTreeKey{value: 1}
-	currentTailKey := leafNode.leafHead
-	for i := 1; i < 3; i++ {
-		leafNode.countOfKeys = leafNode.countOfKeys + 1
-		key := &bPlusTreeKey{
-			value: int64(i*10 + 1),
-		}
-		currentTailKey.nextKey = key
-		key.previousKey = currentTailKey
-		currentTailKey = currentTailKey.nextKey
-	}
-	leafNode.insertToLeafNode(31, "value")
-	currentKey := leafNode.leafHead
-	for i := 0; i < 4; i++ {
-		if currentKey.value != int64(i*10+1) {
-			t.FailNow()
-		}
-		currentKey = currentKey.nextKey
+func TestGetPointer_KeyLessThan10(t *testing.T) {
+	node := initOneTestInternalNode(9)
+	pointer := node.getPointer(3)
+	if !(pointer.previousKey == nil && pointer.nextKey.value == 10) {
+		t.FailNow()
 	}
 }
 
-func Test_AddKeyWithinLeafArray(t *testing.T) {
-	leafNode := BPlusTreeNode{
-		isLeaf: true,
-	}
-	leafNode.leafHead = &bPlusTreeKey{value: 1}
-	currentTailKey := leafNode.leafHead
-	for i := 1; i < 10; i++ {
-		if i == 6 {
-			continue
-		}
-		leafNode.countOfKeys = leafNode.countOfKeys + 1
-		key := &bPlusTreeKey{
-			value: int64(i*10 + 1),
-		}
-		currentTailKey.nextKey = key
-		key.previousKey = currentTailKey
-		currentTailKey = currentTailKey.nextKey
-	}
-	leafNode.insertToLeafNode(61, "value")
-	currentKey := leafNode.leafHead
-	for i := 0; i < 10; i++ {
-		if currentKey.value != int64(i*10+1) {
-			t.FailNow()
-		}
-		currentKey = currentKey.nextKey
+func TestGetPointer_KeyMoreThan90(t *testing.T) {
+	node := initOneTestInternalNode(9)
+	pointer := node.getPointer(100)
+	if !(pointer.previousKey.value == 90 && pointer.nextKey == nil) {
+		t.FailNow()
 	}
 }
 
-func Test_AddKeyAtStartOfList(t *testing.T) {
-	leafNode := BPlusTreeNode{
-		isLeaf: true,
+func initOneTestInternalNode(countOfKeys int) *BPlusTreeNode {
+	node := BPlusTreeNode{
+		isLeaf:      false,
+		countOfKeys: countOfKeys,
 	}
-	leafNode.leafHead = &bPlusTreeKey{value: 1}
-	currentTailKey := leafNode.leafHead
-	for i := 1; i < 3; i++ {
-		leafNode.countOfKeys = leafNode.countOfKeys + 1
-		key := &bPlusTreeKey{
-			value: int64(i*10 + 1),
+	value := int64(0)
+	node.internalNodeHead = &bPlusTreePointer{}
+	previousPointer := node.internalNodeHead
+	for i := 0; i < countOfKeys; i++ {
+		value = value + 10
+		newKey := bPlusTreeKey{
+			previousPointer: previousPointer,
+			value:           value,
 		}
-		currentTailKey.nextKey = key
-		key.previousKey = currentTailKey
-		currentTailKey = currentTailKey.nextKey
-	}
-	leafNode.insertToLeafNode(-9, "value")
-	currentKey := leafNode.leafHead
-	for i := -1; i < 3; i++ {
-		if currentKey.value != int64(i*10+1) {
-			t.FailNow()
+		previousPointer.nextKey = &newKey
+		newPointer := bPlusTreePointer{
+			previousKey: &newKey,
 		}
-		currentKey = currentKey.nextKey
+		newKey.nextPointer = &newPointer
+		previousPointer = &newPointer
 	}
-}
-
-func Test_Insert700Values(t *testing.T) {
-	tree := initTree(2)
-	for i := 1; i < 700; i++ {
-		tree.Insert(int64(i), "")
-	}
-}
-
-func Test_GetPointer_oneKey(t *testing.T) {
-	internalNode := BPlusTreeNode{
-		isLeaf: false,
-	}
-	internalNode.internalNodeHead = &bPlusTreePointer{}
-	currentPointer := internalNode.internalNodeHead
-	for i := 0; i < 2; i++ {
-		internalNode.countOfKeys = internalNode.countOfKeys + 1
-		key := &bPlusTreeKey{
-			value: int64(i*10 + 1),
-		}
-		pointer := &bPlusTreePointer{}
-		key.nextPointer = pointer
-		currentPointer.nextKey = key
-		key.previousPointer = currentPointer
-		pointer.previousKey = key
-		currentPointer = currentPointer.nextKey.nextPointer
-	}
-	pointer := internalNode.getPointer(2)
-	log.Println(pointer)
-}
-
-func Test_InsertRandom700Values(t *testing.T) {
-	tree := initTree(2)
-	keys := make([]int64, 0, 10)
-	for i := 0; i < 10; i++ {
-		keys = append(keys, rand.Int63n(10000))
-		tree.Insert(keys[i], "")
-	}
-	//8315, 8397
-	for i := 0; i < 10; i++ {
-		if found := tree.Find(keys[i]); !found {
-			t.FailNow()
-		}
-	}
+	return &node
 }

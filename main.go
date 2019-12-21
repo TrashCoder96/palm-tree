@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
 )
 
@@ -44,6 +43,53 @@ type bPlusTreePointer struct {
 	nextKey     *bPlusTreeKey
 	previousKey *bPlusTreeKey
 	childNode   *BPlusTreeNode
+}
+
+//Insert function
+func (bpt *BPlusTree) Insert(key int64, value string) {
+	if bpt.root == nil {
+		bpt.root = &BPlusTreeNode{
+			isLeaf:      true,
+			countOfKeys: 1,
+			leafHead: &bPlusTreeKey{
+				value: key,
+			},
+		}
+		return
+	}
+	rootPointer := bPlusTreePointer{childNode: bpt.root}
+	bpt.insert(key, value, &rootPointer)
+	if bpt.root.countOfKeys > 2*bpt.order-1 {
+		newNode := BPlusTreeNode{
+			internalNodeHead: &rootPointer,
+			countOfKeys:      1,
+		}
+		bpt.root = &newNode
+	}
+}
+
+//Delete function
+func (bpt *BPlusTree) Delete(key int64) {
+	bpt.delete(key, bpt.root)
+}
+
+//Find function
+func (bpt *BPlusTree) Find(key int64) bool {
+	return bpt.find(key, bpt.root)
+}
+
+func (bpt *BPlusTree) insert(key int64, value string, pointerToNode *bPlusTreePointer) {
+	if pointerToNode.childNode.isLeaf {
+		pointerToNode.childNode.insertToLeafNode(key, value)
+		if pointerToNode.childNode.countOfKeys > 2*bpt.order-1 {
+			cutIfPossible(pointerToNode)
+		}
+	}
+	suitablePointer := pointerToNode.childNode.getPointer(key)
+	bpt.insert(key, value, suitablePointer)
+	if suitablePointer.childNode.countOfKeys > 2*bpt.order-1 {
+		cutIfPossible(suitablePointer)
+	}
 }
 
 func (bptn *BPlusTreeNode) getPointer(key int64) *bPlusTreePointer {
@@ -156,53 +202,6 @@ func cutIfPossible(pointer *bPlusTreePointer) {
 	}
 }
 
-func (bpt *BPlusTree) insert(key int64, value string, pointerToNode *bPlusTreePointer) {
-	if pointerToNode.childNode.isLeaf {
-		pointerToNode.childNode.insertToLeafNode(key, value)
-		if pointerToNode.childNode.countOfKeys > 2*bpt.order-1 {
-			cutIfPossible(pointerToNode)
-		}
-	}
-	suitablePointer := pointerToNode.childNode.getPointer(key)
-	bpt.insert(key, value, suitablePointer)
-	if suitablePointer.childNode.countOfKeys > 2*bpt.order-1 {
-		cutIfPossible(suitablePointer)
-	}
-}
-
-//Insert function
-func (bpt *BPlusTree) Insert(key int64, value string) {
-	if bpt.root == nil {
-		bpt.root = &BPlusTreeNode{
-			isLeaf:      true,
-			countOfKeys: 1,
-			leafHead: &bPlusTreeKey{
-				value: key,
-			},
-		}
-		return
-	}
-	rootPointer := bPlusTreePointer{childNode: bpt.root}
-	bpt.insert(key, value, &rootPointer)
-	if bpt.root.countOfKeys > 2*bpt.order-1 {
-		newNode := BPlusTreeNode{
-			internalNodeHead: &rootPointer,
-			countOfKeys:      1,
-		}
-		bpt.root = &newNode
-	}
-}
-
-//Delete function
-func (bpt *BPlusTree) Delete(key int64) {
-	bpt.delete(key, bpt.root)
-}
-
-//Find function
-func (bpt *BPlusTree) Find(key int64) bool {
-	return bpt.find(key, bpt.root)
-}
-
 func (bpt *BPlusTree) find(key int64, node *BPlusTreeNode) bool {
 	if node != nil {
 		if node.isLeaf {
@@ -222,9 +221,6 @@ func (bpt *BPlusTree) find(key int64, node *BPlusTreeNode) bool {
 }
 
 func (bpt *BPlusTree) delete(key int64, node *BPlusTreeNode) error {
-	if key == 8449 {
-		fmt.Println(key)
-	}
 	if node != nil {
 		if node.isLeaf {
 			if ok := node.deleteFromLeafNode(key); ok {
