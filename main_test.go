@@ -26,6 +26,70 @@ func TestGetPointer_KeyMoreThan90(t *testing.T) {
 	}
 }
 
+func TestInsertToLeafNode_ok(t *testing.T) {
+	countOfKeys := 9
+	node := initOneTestLeafNode(countOfKeys)
+	node.insertToLeafNode(25, "")
+	keys := []int64{10, 20, 25, 30, 40, 50, 60, 70, 80, 90}
+	currentKey := node.leafHead
+	for _, key := range keys {
+		if currentKey.value != key {
+			t.FailNow()
+		}
+		currentKey = currentKey.nextKey
+	}
+}
+
+func TestInsertToLeafNode_atStartPosition(t *testing.T) {
+	countOfKeys := 9
+	node := initOneTestLeafNode(countOfKeys)
+	node.insertToLeafNode(5, "")
+	keys := []int64{5, 10, 20, 30, 40, 50, 60, 70, 80, 90}
+	currentKey := node.leafHead
+	for _, key := range keys {
+		if currentKey.value != key {
+			t.FailNow()
+		}
+		currentKey = currentKey.nextKey
+	}
+}
+
+func TestInsertToLeafNode_atEndPosition(t *testing.T) {
+	countOfKeys := 9
+	node := initOneTestLeafNode(countOfKeys)
+	node.insertToLeafNode(100, "")
+	keys := []int64{10, 20, 30, 40, 50, 60, 70, 80, 90, 100}
+	currentKey := node.leafHead
+	for _, key := range keys {
+		if currentKey.value != key {
+			t.FailNow()
+		}
+		currentKey = currentKey.nextKey
+	}
+}
+
+func initOneTestLeafNode(countOfKeys int) *BPlusTreeNode {
+	value := int64(10)
+	node := BPlusTreeNode{
+		isLeaf:      true,
+		countOfKeys: countOfKeys,
+		leafHead: &bPlusTreeKey{
+			value: value,
+		},
+	}
+	previousKey := node.leafHead
+	for i := 1; i < countOfKeys; i++ {
+		value = value + 10
+		newKey := bPlusTreeKey{
+			value:       value,
+			previousKey: previousKey,
+		}
+		previousKey.nextKey = &newKey
+		previousKey = previousKey.nextKey
+	}
+	return &node
+}
+
 func initOneTestInternalNode(countOfKeys int) *BPlusTreeNode {
 	node := BPlusTreeNode{
 		isLeaf:      false,
