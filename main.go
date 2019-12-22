@@ -53,7 +53,7 @@ type bPlusTreePointer struct {
 
 //Insert function
 func (bpt *BPlusTree) Insert(key int64, value string) {
-	if bpt.root.leafHead == nil {
+	if bpt.root.leafHead == nil && bpt.root.internalNodeHead == nil {
 		bpt.root.leafHead = &bPlusTreeKey{
 			value: key,
 		}
