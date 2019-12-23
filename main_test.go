@@ -133,7 +133,7 @@ func TestInsertToTree_rootNodeOverlow_ok(t *testing.T) {
 	}
 }
 
-func TestInsertToTree_internalNodeOverflow_ok(t *testing.T) {
+func TestInsertToTree_leafNodeOverflow_ok(t *testing.T) {
 	tree := BPlusTree{
 		order: 2,
 		root:  initOneTestInternalNode(2, 10, 10),
@@ -146,16 +146,45 @@ func TestInsertToTree_internalNodeOverflow_ok(t *testing.T) {
 	checkLeafNode([]int64{14, 16}, tree.root.internalNodeHead.nextKey.nextPointer.nextKey.nextPointer.childNode, t)
 }
 
+func TestInsertToTree_internalNodeOverflow_ok(t *testing.T) {
+	tree := BPlusTree{
+		order: 2,
+		root:  initOneTestInternalNode(1, 20, 10),
+	}
+	tree.root.internalNodeHead.childNode = initOneTestInternalNode(2, 16, 3)
+	tree.root.internalNodeHead.childNode.internalNodeHead.childNode = initOneTestInternalNode(3, 1, 1)
+	tailPointer := tree.root.internalNodeHead.childNode.internalNodeHead.childNode.internalNodeHead
+	for tailPointer.nextKey != nil {
+		tailPointer = tailPointer.nextKey.nextPointer
+	}
+	tailPointer.childNode = initOneTestLeafNode(3, 5, 1)
+	tree.Insert(8, "")
+	checkInternalNode([]int64{20}, tree.root, t)
+	checkInternalNode([]int64{2, 16, 19}, tree.root.internalNodeHead.childNode, t)
+	checkInternalNode([]int64{1}, tree.root.internalNodeHead.childNode.internalNodeHead.childNode, t)
+	checkInternalNode([]int64{3, 7}, tree.root.internalNodeHead.childNode.internalNodeHead.nextKey.nextPointer.childNode, t)
+	checkLeafNode([]int64{5, 6}, tree.root.internalNodeHead.
+		childNode.internalNodeHead.nextKey.nextPointer.childNode.
+		internalNodeHead.nextKey.nextPointer.childNode, t)
+	checkLeafNode([]int64{7, 8}, tree.root.internalNodeHead.
+		childNode.internalNodeHead.nextKey.nextPointer.childNode.
+		internalNodeHead.nextKey.nextPointer.nextKey.nextPointer.childNode, t)
+}
+
 func checkLeafNode(keys []int64, node *BPlusTreeNode, t *testing.T) {
 	currentKey := node.leafHead
 	for index, key := range keys {
 		assertCondition := currentKey.value == key
 		if index > 0 && index < len(keys)-1 {
-			assertCondition = assertCondition && currentKey.nextKey != nil && currentKey.previousKey != nil
+			assertCondition = assertCondition &&
+				currentKey.nextKey != nil &&
+				currentKey.previousKey != nil
 		} else if index > 0 {
-			assertCondition = assertCondition && currentKey.nextKey == nil
+			assertCondition = assertCondition &&
+				currentKey.nextKey == nil
 		} else {
-			assertCondition = assertCondition && currentKey.previousKey == nil
+			assertCondition = assertCondition &&
+				currentKey.previousKey == nil
 		}
 		if !assertCondition {
 			t.FailNow()

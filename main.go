@@ -81,19 +81,25 @@ func (bpt *BPlusTree) Find(key int64) bool {
 	return bpt.find(key, bpt.root)
 }
 
-func (bpt *BPlusTree) insert(key int64, value string, pointerToNode *bPlusTreePointer) {
+//function returns true, if cutting has occured
+func (bpt *BPlusTree) insert(key int64, value string, pointerToNode *bPlusTreePointer) bool {
 	if pointerToNode.childNode.isLeaf {
 		pointerToNode.childNode.insertToLeafNode(key, value)
 		if pointerToNode.childNode.countOfKeys > 2*bpt.order-1 {
 			cutIfPossible(pointerToNode)
+			return true
 		}
 	} else {
 		suitablePointer := pointerToNode.childNode.getPointer(key)
-		bpt.insert(key, value, suitablePointer)
-		if suitablePointer.childNode.countOfKeys > 2*bpt.order-1 {
-			cutIfPossible(suitablePointer)
+		if bpt.insert(key, value, suitablePointer) {
+			pointerToNode.childNode.countOfKeys = pointerToNode.childNode.countOfKeys + 1
+		}
+		if pointerToNode.childNode.countOfKeys > 2*bpt.order-1 {
+			cutIfPossible(pointerToNode)
+			return true
 		}
 	}
+	return false
 }
 
 func (bptn *BPlusTreeNode) getPointer(key int64) *bPlusTreePointer {
@@ -200,8 +206,10 @@ func cutIfPossible(pointer *bPlusTreePointer) {
 			pointerBeforeMiddleKey = pointerBeforeMiddleKey.nextKey.nextPointer
 		}
 		leftNode.countOfKeys = rightNode.countOfKeys - 1
+		rightPointer.childNode = &rightNode
 		rightNode.internalNodeHead = pointerBeforeMiddleKey.nextKey.nextPointer
 		rightNode.internalNodeHead.previousKey = nil
+		newKey.value = pointerBeforeMiddleKey.nextKey.value
 		pointerBeforeMiddleKey.nextKey = nil
 	}
 }
