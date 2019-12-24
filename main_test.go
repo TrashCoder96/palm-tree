@@ -171,6 +171,101 @@ func TestInsertToTree_internalNodeOverflow_ok(t *testing.T) {
 		internalNodeHead.nextKey.nextPointer.nextKey.nextPointer.childNode, t)
 }
 
+func TestDeleteFromTree_onlyLeafNode_ok(t *testing.T) {
+	tree := BPlusTree{
+		order: 2,
+		root:  initOneTestLeafNode(3, 10, 10),
+	}
+	assertCondition := tree.Delete(20)
+	if !assertCondition {
+		t.FailNow()
+	}
+	checkLeafNode([]int64{10, 30}, tree.root, t)
+}
+
+func TestDeleteFromTree_onlyLeafNode_fail(t *testing.T) {
+	tree := BPlusTree{
+		order: 2,
+		root:  initOneTestLeafNode(3, 10, 10),
+	}
+	assertCondition := !tree.Delete(25)
+	if !assertCondition {
+		t.FailNow()
+	}
+}
+
+func TestDeleteFromTree_rootAndFirstTwoLeafNode_ok(t *testing.T) {
+	tree := BPlusTree{
+		order: 2,
+		root:  initOneTestInternalNode(3, 20, 10),
+	}
+	tree.root.internalNodeHead.childNode = initOneTestLeafNode(3, 3, 3)
+	tree.root.internalNodeHead.nextKey.nextPointer.childNode = initOneTestLeafNode(2, 21, 1)
+	assertCondition := tree.Delete(3)
+	if !assertCondition {
+		t.FailNow()
+	}
+	checkInternalNode([]int64{20, 30, 40}, tree.root, t)
+	checkLeafNode([]int64{6, 9}, tree.root.internalNodeHead.childNode, t)
+	checkLeafNode([]int64{21, 22}, tree.root.internalNodeHead.nextKey.nextPointer.childNode, t)
+}
+
+func TestDeleteFromTree_rootAndLastTwoLeafNode_ok(t *testing.T) {
+	tree := BPlusTree{
+		order: 2,
+		root:  initOneTestInternalNode(3, 20, 10),
+	}
+	tailPointer := tree.root.internalNodeHead
+	for tailPointer.nextKey != nil {
+		tailPointer = tailPointer.nextKey.nextPointer
+	}
+	tailPointer.childNode = initOneTestLeafNode(3, 41, 1)
+	tailPointer.previousKey.previousPointer.childNode = initOneTestLeafNode(2, 31, 1)
+	assertCondition := tree.Delete(41)
+	if !assertCondition {
+		t.FailNow()
+	}
+	checkInternalNode([]int64{20, 30, 40}, tree.root, t)
+	checkLeafNode([]int64{31, 32}, tailPointer.previousKey.previousPointer.childNode, t)
+	checkLeafNode([]int64{42, 43}, tailPointer.childNode, t)
+}
+
+func TestDeleteFromTree_rootAndLastLittleTwoNodes_ok(t *testing.T) {
+	tree := BPlusTree{
+		order: 2,
+		root:  initOneTestInternalNode(3, 20, 10),
+	}
+	tailPointer := tree.root.internalNodeHead
+	for tailPointer.nextKey != nil {
+		tailPointer = tailPointer.nextKey.nextPointer
+	}
+	tailPointer.childNode = initOneTestLeafNode(2, 41, 1)
+	tailPointer.previousKey.previousPointer.childNode = initOneTestLeafNode(1, 31, 0)
+	assertCondition := tree.Delete(42)
+	if !assertCondition {
+		t.FailNow()
+	}
+	checkInternalNode([]int64{20, 30}, tree.root, t)
+	checkLeafNode([]int64{31, 41}, tree.root.internalNodeHead.nextKey.nextPointer.nextKey.nextPointer.childNode, t)
+}
+
+func TestDeleteFromTree_moveToLeftNode_ok(t *testing.T) {
+	tree := BPlusTree{
+		order: 3,
+		root:  initOneTestInternalNode(3, 20, 20),
+	}
+	tree.root.internalNodeHead.nextKey.nextPointer.childNode = initOneTestLeafNode(3, 21, 1)
+	tree.root.internalNodeHead.nextKey.nextPointer.nextKey.nextPointer.childNode = initOneTestLeafNode(5, 41, 1)
+	assertCondition := tree.Delete(22)
+	if !assertCondition {
+		t.FailNow()
+	}
+	checkInternalNode([]int64{20, 42, 60}, tree.root, t)
+	checkLeafNode([]int64{21, 23, 41}, tree.root.internalNodeHead.nextKey.nextPointer.childNode, t)
+	n := tree.root.internalNodeHead.nextKey.nextPointer.nextKey.nextPointer.childNode
+	checkLeafNode([]int64{42, 43, 44, 45}, n, t)
+}
+
 func checkLeafNode(keys []int64, node *BPlusTreeNode, t *testing.T) {
 	currentKey := node.leafHead
 	for index, key := range keys {

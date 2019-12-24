@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"os"
 )
 
@@ -72,8 +71,8 @@ func (bpt *BPlusTree) Insert(key int64, value string) {
 }
 
 //Delete function
-func (bpt *BPlusTree) Delete(key int64) {
-	bpt.delete(key, bpt.root)
+func (bpt *BPlusTree) Delete(key int64) bool {
+	return bpt.delete(key, bpt.root)
 }
 
 //Find function
@@ -232,24 +231,19 @@ func (bpt *BPlusTree) find(key int64, node *BPlusTreeNode) bool {
 	panic("Operation is not allowed")
 }
 
-func (bpt *BPlusTree) delete(key int64, node *BPlusTreeNode) error {
+func (bpt *BPlusTree) delete(key int64, node *BPlusTreeNode) bool {
 	if node != nil {
 		if node.isLeaf {
-			if ok := node.deleteFromLeafNode(key); ok {
-				return nil
-			}
-			return errors.New("Key not found")
+			return node.deleteFromLeafNode(key)
 		}
 		currentPointer := node.getPointer(key)
-		if itemNotFoundErr := bpt.delete(key, currentPointer.childNode); itemNotFoundErr != nil {
-			return itemNotFoundErr
-		}
+		success := bpt.delete(key, currentPointer.childNode)
 		if currentPointer.nextKey == nil {
 			bpt.redistributeNodesIfPossible(currentPointer.previousKey.previousPointer, node)
 		} else {
 			bpt.redistributeNodesIfPossible(currentPointer, node)
 		}
-		return nil
+		return success
 	}
 	panic("Operation is not allowed")
 }
@@ -258,13 +252,16 @@ func (bpt *BPlusTree) redistributeNodesIfPossible(subtree *bPlusTreePointer, nod
 	leftPointer := subtree
 	middleKey := leftPointer.nextKey
 	rightPointer := middleKey.nextPointer
-	leftPointerChildNodeLessThanOrderMinusOne := leftPointer.childNode.countOfKeys <= bpt.order-1   //t - 1
-	rightPointerChildNodeLessThanOrderMinusOne := rightPointer.childNode.countOfKeys <= bpt.order-1 //t - 1
-	if leftPointerChildNodeLessThanOrderMinusOne && rightPointerChildNodeLessThanOrderMinusOne {
+	leftPointerChildNodeLessThanOrder := leftPointer.childNode.countOfKeys <= bpt.order
+	leftPointerChildNodeLessThanOrderMinusOne := leftPointer.childNode.countOfKeys <= bpt.order-1
+	rightPointerChildNodeLessThanOrder := rightPointer.childNode.countOfKeys <= bpt.order
+	rightPointerChildNodeLessThanOrderMinusOne := rightPointer.childNode.countOfKeys <= bpt.order-1
+	if (leftPointerChildNodeLessThanOrder && rightPointerChildNodeLessThanOrderMinusOne) ||
+		leftPointerChildNodeLessThanOrderMinusOne && rightPointerChildNodeLessThanOrder {
 		merge(subtree)
-	} else if leftPointerChildNodeLessThanOrderMinusOne && !rightPointerChildNodeLessThanOrderMinusOne {
+	} else if leftPointerChildNodeLessThanOrderMinusOne && !rightPointerChildNodeLessThanOrder {
 		moveToLeftNode(subtree)
-	} else if !leftPointerChildNodeLessThanOrderMinusOne && rightPointerChildNodeLessThanOrderMinusOne {
+	} else if !leftPointerChildNodeLessThanOrder && rightPointerChildNodeLessThanOrderMinusOne {
 		moveToRightNode(subtree)
 	}
 }
@@ -277,6 +274,7 @@ func moveToLeftNode(subtree *bPlusTreePointer) {
 	if lowLevelIsLeaves {
 		movedItem := rightPointer.childNode.leafHead
 		rightPointer.childNode.leafHead = rightPointer.childNode.leafHead.nextKey
+		rightPointer.childNode.leafHead.previousKey = nil
 		movedItem.nextKey = nil
 		tailKey := leftPointer.childNode.leafHead
 		for tailKey.nextKey != nil {
