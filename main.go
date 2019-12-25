@@ -72,7 +72,14 @@ func (bpt *BPlusTree) Insert(key int64, value string) {
 
 //Delete function
 func (bpt *BPlusTree) Delete(key int64) bool {
-	return bpt.delete(key, bpt.root)
+	if bpt.delete(key, bpt.root) {
+		if (bpt.root.internalNodeHead != nil && bpt.root.internalNodeHead.nextKey == nil) ||
+			bpt.root.leafHead != nil && bpt.root.leafHead.nextKey == nil {
+			bpt.root = bpt.root.internalNodeHead.childNode
+		}
+		return true
+	}
+	return false
 }
 
 //Find function
@@ -259,6 +266,7 @@ func (bpt *BPlusTree) redistributeNodesIfPossible(subtree *bPlusTreePointer, nod
 	if (leftPointerChildNodeLessThanOrder && rightPointerChildNodeLessThanOrderMinusOne) ||
 		leftPointerChildNodeLessThanOrderMinusOne && rightPointerChildNodeLessThanOrder {
 		merge(subtree)
+		node.countOfKeys = node.countOfKeys - 1
 	} else if leftPointerChildNodeLessThanOrderMinusOne && !rightPointerChildNodeLessThanOrder {
 		moveToLeftNode(subtree)
 	} else if !leftPointerChildNodeLessThanOrder && rightPointerChildNodeLessThanOrderMinusOne {
