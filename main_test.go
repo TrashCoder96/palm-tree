@@ -266,6 +266,26 @@ func TestDeleteFromTree_moveToLeftNode_ok(t *testing.T) {
 	checkLeafNode([]int64{42, 43, 44, 45}, n, t)
 }
 
+func TestDeleteFromTree_moveToRightNode_ok(t *testing.T) {
+	tree := BPlusTree{
+		order: 3,
+		root:  initOneTestInternalNode(3, 20, 20),
+	}
+	tailPointer := tree.root.internalNodeHead
+	for tailPointer.nextKey != nil {
+		tailPointer = tailPointer.nextKey.nextPointer
+	}
+	tailPointer.previousKey.previousPointer.childNode = initOneTestLeafNode(5, 41, 1)
+	tailPointer.childNode = initOneTestLeafNode(3, 61, 1)
+	assertCondition := tree.Delete(62)
+	if !assertCondition {
+		t.FailNow()
+	}
+	checkInternalNode([]int64{20, 40, 45}, tree.root, t)
+	checkLeafNode([]int64{41, 42, 43, 44}, tailPointer.previousKey.previousPointer.childNode, t)
+	checkLeafNode([]int64{45, 61, 63}, tailPointer.childNode, t)
+}
+
 func checkLeafNode(keys []int64, node *BPlusTreeNode, t *testing.T) {
 	currentKey := node.leafHead
 	for index, key := range keys {
