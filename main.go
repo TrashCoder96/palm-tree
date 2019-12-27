@@ -341,6 +341,7 @@ func moveToRightNode(subtree *bPlusTreePointer) {
 		tailPointer.previousKey.previousPointer.nextKey = nil
 		tailPointer.previousKey = nil
 		rightPointer.childNode.internalNodeHead.previousKey = &newKey
+		rightPointer.childNode.internalNodeHead = newKey.previousPointer
 	}
 	leftPointer.childNode.countOfKeys = leftPointer.childNode.countOfKeys - 1
 	rightPointer.childNode.countOfKeys = rightPointer.childNode.countOfKeys + 1
