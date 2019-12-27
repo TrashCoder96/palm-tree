@@ -9,6 +9,14 @@ func main() {
 }
 
 func process(params []string) {
+	tree := initTree(5)
+	for i := 1; i <= 100000; i++ {
+		tree.Insert(int64(i), "")
+	}
+	//tree.Find(991)
+	for i := 50000; i > 0; i-- {
+		tree.Delete(int64(i))
+	}
 }
 
 func initTree(order int) *BPlusTree {
@@ -73,8 +81,7 @@ func (bpt *BPlusTree) Insert(key int64, value string) {
 //Delete function
 func (bpt *BPlusTree) Delete(key int64) bool {
 	if bpt.delete(key, bpt.root) {
-		if (bpt.root.internalNodeHead != nil && bpt.root.internalNodeHead.nextKey == nil) ||
-			bpt.root.leafHead != nil && bpt.root.leafHead.nextKey == nil {
+		if bpt.root.internalNodeHead != nil && bpt.root.internalNodeHead.nextKey == nil {
 			bpt.root = bpt.root.internalNodeHead.childNode
 		}
 		return true
@@ -111,22 +118,22 @@ func (bpt *BPlusTree) insert(key int64, value string, pointerToNode *bPlusTreePo
 func (bptn *BPlusTreeNode) getPointer(key int64) *bPlusTreePointer {
 	if !bptn.isLeaf {
 		currentPointer := bptn.internalNodeHead
-		nextKeyValueMoreOrEqualsKey := false
+		nextKeyValueMoreThanKey := false
 		nextKeyIsNil := false
 		for {
 			nextKeyIsNil = currentPointer.nextKey == nil
 			if !nextKeyIsNil {
-				nextKeyValueMoreOrEqualsKey = currentPointer.nextKey.value >= key
+				nextKeyValueMoreThanKey = currentPointer.nextKey.value > key
 			}
-			if nextKeyValueMoreOrEqualsKey || nextKeyIsNil {
+			if nextKeyValueMoreThanKey || nextKeyIsNil {
 				break
 			} else {
 				currentPointer = currentPointer.nextKey.nextPointer
 			}
 		}
-		if nextKeyIsNil && !nextKeyValueMoreOrEqualsKey {
+		if nextKeyIsNil && !nextKeyValueMoreThanKey {
 			return currentPointer
-		} else if nextKeyValueMoreOrEqualsKey {
+		} else if nextKeyValueMoreThanKey {
 			return currentPointer
 		} else {
 			panic("Operation is not allowed!!!")
@@ -245,10 +252,12 @@ func (bpt *BPlusTree) delete(key int64, node *BPlusTreeNode) bool {
 		}
 		currentPointer := node.getPointer(key)
 		success := bpt.delete(key, currentPointer.childNode)
-		if currentPointer.nextKey == nil {
-			bpt.redistributeNodesIfPossible(currentPointer.previousKey.previousPointer, node)
-		} else {
-			bpt.redistributeNodesIfPossible(currentPointer, node)
+		if success {
+			if currentPointer.nextKey == nil {
+				bpt.redistributeNodesIfPossible(currentPointer.previousKey.previousPointer, node)
+			} else {
+				bpt.redistributeNodesIfPossible(currentPointer, node)
+			}
 		}
 		return success
 	}
@@ -387,7 +396,9 @@ func (bptn *BPlusTreeNode) deleteFromLeafNode(key int64) bool {
 		if currentLeaf.value == key {
 			if currentLeaf.previousKey == nil {
 				bptn.leafHead = currentLeaf.nextKey
-				currentLeaf.nextKey.previousKey = nil
+				if currentLeaf.nextKey != nil {
+					currentLeaf.nextKey.previousKey = nil
+				}
 			} else if currentLeaf.nextKey == nil {
 				currentLeaf.previousKey.nextKey = nil
 			} else {

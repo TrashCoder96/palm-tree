@@ -5,10 +5,10 @@ import (
 )
 
 func TestGetPointer_ok(t *testing.T) {
-	node := initOneTestInternalNode(9, 10, 10)
-	pointer := node.getPointer(11)
-	assertCondition := pointer.previousKey.value == 10 &&
-		pointer.nextKey.value == 20
+	node := initOneTestInternalNodeByKeys([]int64{6, 16})
+	pointer := node.getPointer(6)
+	assertCondition := pointer.previousKey.value == 6 &&
+		pointer.nextKey.value == 16
 	if !assertCondition {
 		t.FailNow()
 	}
