@@ -293,13 +293,13 @@ func TestDeleteFromTree_mergeToOneRootNode_ok(t *testing.T) {
 		order: 5,
 		root:  initOneTestInternalNode(1, 20, 0),
 	}
-	tree.root.internalNodeHead.childNode = initOneTestLeafNode(5, 10, 1)
-	tree.root.internalNodeHead.nextKey.nextPointer.childNode = initOneTestLeafNode(5, 21, 1)
+	tree.root.internalNodeHead.childNode = initOneTestLeafNode(4, 10, 1)
+	tree.root.internalNodeHead.nextKey.nextPointer.childNode = initOneTestLeafNode(4, 21, 1)
 	assertCondition := tree.Delete(21)
 	if !assertCondition {
 		t.FailNow()
 	}
-	checkLeafNode([]int64{10, 11, 12, 13, 14, 22, 23, 24, 25}, tree.root, t)
+	checkLeafNode([]int64{10, 11, 12, 13, 22, 23, 24}, tree.root, t)
 }
 
 func TestDeleteFromTree_mergeTwoLastNodes_ok(t *testing.T) {
@@ -311,18 +311,52 @@ func TestDeleteFromTree_mergeTwoLastNodes_ok(t *testing.T) {
 	for tailPointer.nextKey != nil {
 		tailPointer = tailPointer.nextKey.nextPointer
 	}
-	tailPointer.previousKey.previousPointer.childNode = initOneTestLeafNode(5, 21, 1)
+	tailPointer.previousKey.previousPointer.childNode = initOneTestLeafNode(4, 21, 1)
 	tailPointer.previousKey.previousPointer.previousKey.previousPointer.childNode = initOneTestLeafNode(5, 11, 1)
 	assertCondition := tree.Delete(15)
 	if !assertCondition {
 		t.FailNow()
 	}
 	checkInternalNode([]int64{10, 30}, tree.root, t)
-	checkLeafNode([]int64{11, 12, 13, 14, 21, 22, 23, 24, 25}, tree.root.internalNodeHead.nextKey.nextPointer.childNode, t)
+	checkLeafNode([]int64{11, 12, 13, 14, 21, 22, 23, 24}, tree.root.internalNodeHead.nextKey.nextPointer.childNode, t)
+}
+
+func TestDeleteFromTree_mergeTwoInternalNodes_ok(t *testing.T) {
+	tree := BPlusTree{
+		order: 5,
+		root:  initOneTestInternalNodeByKeys([]int64{21}),
+	}
+	tree.root.internalNodeHead.childNode = initOneTestInternalNodeByKeys([]int64{5, 6, 7, 8, 15})
+	tree.root.internalNodeHead.nextKey.nextPointer.childNode = initOneTestInternalNodeByKeys([]int64{25, 26, 27, 28})
+	leftChildNodeTailPointer := tree.root.internalNodeHead.childNode.internalNodeHead
+	for leftChildNodeTailPointer.nextKey != nil {
+		leftChildNodeTailPointer = leftChildNodeTailPointer.nextKey.nextPointer
+	}
+	leftChildNodeTailPointer.childNode = initOneTestLeafNodeByKeys([]int64{16, 17, 18, 19, 20})
+	leftChildNodeTailPointer.previousKey.previousPointer.childNode = initOneTestLeafNodeByKeys([]int64{9, 10, 11, 12})
+	assertCondition := tree.Delete(16)
+	if !assertCondition {
+		t.FailNow()
+	}
+	checkInternalNode([]int64{5, 6, 7, 8, 21, 25, 26, 27, 28}, tree.root, t)
+	necessaryPointer := tree.root.internalNodeHead
+	for !(necessaryPointer.nextKey != nil && necessaryPointer.nextKey.value == 21) {
+		necessaryPointer = necessaryPointer.nextKey.nextPointer
+	}
+	checkLeafNode([]int64{9, 10, 11, 12, 17, 18, 19, 20}, necessaryPointer.childNode, t)
+}
+
+func TestDeleteFromTree_moveToRightForInternalNodes_ok(t *testing.T) {
+
+}
+
+func TestDeleteFromTree_moveToLeftForInternalNodes_ok(t *testing.T) {
+
 }
 
 func checkLeafNode(keys []int64, node *BPlusTreeNode, t *testing.T) {
 	currentKey := node.leafHead
+	actualCountOfKeysInNode := 0
 	for index, key := range keys {
 		assertCondition := currentKey.value == key
 		if index > 0 && index < len(keys)-1 {
@@ -339,18 +373,27 @@ func checkLeafNode(keys []int64, node *BPlusTreeNode, t *testing.T) {
 		if !assertCondition {
 			t.FailNow()
 		}
+		actualCountOfKeysInNode = actualCountOfKeysInNode + 1
 		currentKey = currentKey.nextKey
+	}
+	if node.countOfKeys != actualCountOfKeysInNode {
+		t.FailNow()
 	}
 }
 
 func checkInternalNode(keys []int64, node *BPlusTreeNode, t *testing.T) {
 	currentPointer := node.internalNodeHead
+	actualCountOfKeysInNode := 0
 	for _, key := range keys {
+		actualCountOfKeysInNode = actualCountOfKeysInNode + 1
 		currentPointer = currentPointer.nextKey.nextPointer
 		assertCondition := currentPointer.previousKey.value == key
 		if !assertCondition {
 			t.FailNow()
 		}
+	}
+	if node.countOfKeys != actualCountOfKeysInNode {
+		t.FailNow()
 	}
 }
 
@@ -374,6 +417,48 @@ func initOneTestLeafNode(countOfKeys int, base int64, step int64) *BPlusTreeNode
 		}
 		previousKey.nextKey = &newKey
 		previousKey = previousKey.nextKey
+	}
+	return &node
+}
+
+func initOneTestLeafNodeByKeys(keys []int64) *BPlusTreeNode {
+	node := BPlusTreeNode{
+		isLeaf:      true,
+		countOfKeys: len(keys),
+	}
+	node.leafHead = &bPlusTreeKey{
+		value: keys[0],
+	}
+	previousKey := node.leafHead
+	for _, key := range keys[1:] {
+		newKey := bPlusTreeKey{
+			value:       key,
+			previousKey: previousKey,
+		}
+		previousKey.nextKey = &newKey
+		previousKey = previousKey.nextKey
+	}
+	return &node
+}
+
+func initOneTestInternalNodeByKeys(keys []int64) *BPlusTreeNode {
+	node := BPlusTreeNode{
+		isLeaf:      false,
+		countOfKeys: len(keys),
+	}
+	node.internalNodeHead = &bPlusTreePointer{}
+	previousPointer := node.internalNodeHead
+	for _, key := range keys {
+		newKey := bPlusTreeKey{
+			previousPointer: previousPointer,
+			value:           key,
+		}
+		previousPointer.nextKey = &newKey
+		newPointer := bPlusTreePointer{
+			previousKey: &newKey,
+		}
+		newKey.nextPointer = &newPointer
+		previousPointer = &newPointer
 	}
 	return &node
 }
