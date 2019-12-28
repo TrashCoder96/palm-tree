@@ -91,11 +91,11 @@ func TestDeleteFromLeafNode_emptyList(t *testing.T) {
 
 func TestInsertToTree_oneLeafNode_ok(t *testing.T) {
 	tree := BPlusTree{
-		order: 3,
-		root:  initOneTestLeafNode(4, 10, 10),
+		order: 5,
+		root:  initOneTestLeafNodeByKeys([]int64{7, 29, 32, 33, 43, 45, 67}),
 	}
-	tree.Insert(25, "")
-	checkLeafNode([]int64{10, 20, 25, 30, 40}, tree.root, t)
+	tree.Insert(52, "")
+	checkLeafNode([]int64{7, 29, 32, 33, 43, 45, 52, 67}, tree.root, t)
 }
 
 func TestInsertToTree_oneLeafNode_emptyLeafNode(t *testing.T) {

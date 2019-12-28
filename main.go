@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 )
 
@@ -9,13 +10,21 @@ func main() {
 }
 
 func process(params []string) {
+	//slice := []int64{7, 32, 33, 43, 45, 67, 29, 52, 53, 56, 69, 93, 96, 79, 92, 8, 61, 71, 83, 3, 13, 19, 42, 59, 73, 84, 95, 1, 41, 75, 78, 16, 60, 63, 64, 77, 82, 94, 26, 27, 28, 80, 81, 6, 9, 24, 34, 44, 46, 51, 68, 97, 5, 10, 17, 36, 58, 72, 76, 11, 20, 30, 40, 18, 49, 55, 62, 21, 25, 48, 66, 70, 98, 12, 35, 38, 54, 65, 87, 88, 90, 2, 4, 15, 22, 50, 57, 74, 86, 91, 99, 14, 23, 31, 37, 39, 47, 85, 89, 100}
 	tree := initTree(5)
-	for i := 1; i <= 100000; i++ {
-		tree.Insert(int64(i), "")
+	keys := make(map[int64]bool)
+	for i := 0; i < 10000; i++ {
+		keys[int64(i)] = true
 	}
-	//tree.Find(991)
-	for i := 50000; i > 0; i-- {
-		tree.Delete(int64(i))
+	for key, value := range keys {
+		if value {
+			tree.Insert(key, "")
+		}
+	}
+	for key, value := range keys {
+		if value && !tree.Find(key) {
+			log.Println()
+		}
 	}
 }
 
@@ -148,32 +157,27 @@ func (bptn *BPlusTreeNode) insertToLeafNode(key int64, value string) {
 	if bptn.leafHead == nil {
 		bptn.leafHead = &newLeaf
 	} else {
-		foundNextLeaf := false
-		currentLeaf := bptn.leafHead
-		for i := 0; i < bptn.countOfKeys-1; i++ {
-			if currentLeaf.value < key {
-				currentLeaf = currentLeaf.nextKey
-			} else {
-				foundNextLeaf = true
-				break
-			}
+		leafBeforeNewLeaf := bptn.leafHead
+		for leafBeforeNewLeaf.nextKey != nil && leafBeforeNewLeaf.nextKey.value <= key {
+			leafBeforeNewLeaf = leafBeforeNewLeaf.nextKey
 		}
 		newLeaf = bPlusTreeKey{
 			value: key,
 		}
-		if foundNextLeaf {
-			newLeaf.nextKey = currentLeaf
-			if currentLeaf.previousKey == nil {
-				currentLeaf.previousKey = &newLeaf
-				bptn.leafHead = &newLeaf
+		if bptn.leafHead.value < key {
+			if leafBeforeNewLeaf.nextKey == nil {
+				leafBeforeNewLeaf.nextKey = &newLeaf
+				newLeaf.previousKey = leafBeforeNewLeaf
 			} else {
-				newLeaf.previousKey = currentLeaf.previousKey
-				currentLeaf.previousKey.nextKey = &newLeaf
-				currentLeaf.previousKey = &newLeaf
+				newLeaf.nextKey = leafBeforeNewLeaf.nextKey
+				newLeaf.previousKey = leafBeforeNewLeaf
+				leafBeforeNewLeaf.nextKey.previousKey = &newLeaf
+				leafBeforeNewLeaf.nextKey = &newLeaf
 			}
 		} else {
-			currentLeaf.nextKey = &newLeaf
-			newLeaf.previousKey = currentLeaf
+			newLeaf.nextKey = bptn.leafHead
+			bptn.leafHead.previousKey = &newLeaf
+			bptn.leafHead = &newLeaf
 		}
 	}
 	bptn.countOfKeys = bptn.countOfKeys + 1
