@@ -423,7 +423,7 @@ func checkInternalNode(keys []int64, node *BPlusTreeNode, t *testing.T) {
 	currentPointer := node.internalNodeHead
 	actualCountOfKeysInNode := 0
 	for _, key := range keys {
-		actualCountOfKeysInNode = actualCountOfKeysInNode + 1
+		actualCountOfKeysInNode++
 		currentPointer = currentPointer.nextKey.nextPointer
 		assertCondition := currentPointer.previousKey.value == key
 		if !assertCondition {
@@ -433,6 +433,26 @@ func checkInternalNode(keys []int64, node *BPlusTreeNode, t *testing.T) {
 	if node.countOfKeys != actualCountOfKeysInNode {
 		t.FailNow()
 	}
+	tailPointer := node.internalNodeHead
+	for tailPointer.nextKey != nil {
+		tailPointer = tailPointer.nextKey.nextPointer
+	}
+	currentPointer = tailPointer
+	for _, key := range reverse(keys) {
+		currentPointer = currentPointer.previousKey.previousPointer
+		assertCondition := currentPointer.nextKey.value == key
+		if !assertCondition {
+			t.FailNow()
+		}
+	}
+}
+
+func reverse(slice []int64) []int64 {
+	len := len(slice)
+	for i := 0; i < len/2; i++ {
+		slice[i], slice[len-i-1] = slice[len-i-1], slice[i]
+	}
+	return slice
 }
 
 func initOneTestLeafNode(countOfKeys int, base int64, step int64) *BPlusTreeNode {

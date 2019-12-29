@@ -11,19 +11,21 @@ func main() {
 
 func process(params []string) {
 	//slice := []int64{7, 32, 33, 43, 45, 67, 29, 52, 53, 56, 69, 93, 96, 79, 92, 8, 61, 71, 83, 3, 13, 19, 42, 59, 73, 84, 95, 1, 41, 75, 78, 16, 60, 63, 64, 77, 82, 94, 26, 27, 28, 80, 81, 6, 9, 24, 34, 44, 46, 51, 68, 97, 5, 10, 17, 36, 58, 72, 76, 11, 20, 30, 40, 18, 49, 55, 62, 21, 25, 48, 66, 70, 98, 12, 35, 38, 54, 65, 87, 88, 90, 2, 4, 15, 22, 50, 57, 74, 86, 91, 99, 14, 23, 31, 37, 39, 47, 85, 89, 100}
-	tree := initTree(5)
-	keys := make(map[int64]bool)
-	for i := 0; i < 10000; i++ {
-		keys[int64(i)] = true
-	}
-	for key, value := range keys {
-		if value {
-			tree.Insert(key, "")
+	for i := 0; i < 100; i++ {
+		tree := initTree(5)
+		keys := make(map[int64]bool)
+		for i := 0; i < 10000; i++ {
+			keys[int64(i)] = true
 		}
-	}
-	for key, value := range keys {
-		if value && !tree.Find(key) {
-			log.Println()
+		for key, value := range keys {
+			if value {
+				tree.Insert(key, "")
+			}
+		}
+		for key, value := range keys {
+			if value && !tree.Delete(key) {
+				log.Println()
+			}
 		}
 	}
 }
@@ -272,9 +274,7 @@ func (bpt *BPlusTree) redistributeNodesIfPossible(subtree *bPlusTreePointer, nod
 	leftPointer := subtree
 	middleKey := leftPointer.nextKey
 	rightPointer := middleKey.nextPointer
-	//leftPointerChildNodeLessThanOrder := leftPointer.childNode.countOfKeys <= bpt.order
 	leftPointerChildNodeLessThanOrderMinusOne := leftPointer.childNode.countOfKeys <= bpt.order-1
-	//rightPointerChildNodeLessThanOrder := rightPointer.childNode.countOfKeys <= bpt.order
 	rightPointerChildNodeLessThanOrderMinusOne := rightPointer.childNode.countOfKeys <= bpt.order-1
 	if leftPointerChildNodeLessThanOrderMinusOne && rightPointerChildNodeLessThanOrderMinusOne {
 		merge(subtree)
@@ -375,7 +375,7 @@ func merge(subtree *bPlusTreePointer) {
 		rightPointer.childNode.leafHead.previousKey = tailLeaf
 		leftPointer.nextKey = rightPointer.nextKey
 		if rightPointer.nextKey != nil {
-			rightPointer.nextKey.previousPointer = rightPointer
+			rightPointer.nextKey.previousPointer = leftPointer
 		}
 	} else {
 		tailPointer := leftPointer.childNode.internalNodeHead
@@ -388,7 +388,7 @@ func merge(subtree *bPlusTreePointer) {
 		rightPointer.childNode.internalNodeHead.previousKey = middleKey
 		leftPointer.nextKey = rightPointer.nextKey
 		if rightPointer.nextKey != nil {
-			rightPointer.nextKey.previousPointer = rightPointer
+			rightPointer.nextKey.previousPointer = leftPointer
 		}
 		leftPointer.childNode.countOfKeys++
 	}
